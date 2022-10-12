@@ -25,6 +25,10 @@ CONTENT CONTENT CONTENT
 CONTENT CONTENT CONTENT
 ```
 Where anything that has to do with files, can optionally be left out.  
+To add a file, you can use the following:
+```
+request.AddFile(filename string, content []byte, boundary string)
+```
 The following is needed:  
 `CONTENT_LENGTH` and `COMMAND`  
 Content length is used to make sure the whole request is parsed properly, and chunks we not forgotten.  
