@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/Nigel2392/typeutils"
-	"github.com/TwiN/go-color"
 )
 
 type Logger struct {
@@ -90,22 +89,30 @@ func (l *Logger) Test(msg string) {
 }
 
 func Colorize(level int, msg string) string {
+	var (
+		Reset  string = "\033[0m"
+		Red    string = "\033[31m"
+		Green  string = "\033[32m"
+		Yellow string = "\033[33m"
+		Blue   string = "\033[34m"
+		Purple string = "\033[35m"
+	)
 	var selected string
 	switch level {
 	case 0:
-		selected = color.Purple
+		selected = Purple
 	case 1:
-		selected = color.Green
+		selected = Green
 	case 2:
-		selected = color.Blue
+		selected = Blue
 	case 3:
-		selected = color.Yellow
+		selected = Yellow
 	case 4:
-		selected = color.Red
+		selected = Red
 	default:
-		selected = color.Green
+		selected = Green
 	}
-	return color.Colorize(selected, msg)
+	return selected + msg + Reset
 }
 func WrapTime(t string, msg string) string {
 	var time string = time.Now().Format("2006-01-02 15:04:05")
