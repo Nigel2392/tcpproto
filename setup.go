@@ -1,0 +1,4 @@
+package main
+
+const BUFF_SIZE int = 2048
+var LOGGER *Logger = NewLogger("debug")
