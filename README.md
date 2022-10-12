@@ -51,19 +51,25 @@ A typical client looks like this:
 ```
 // Initialise request
 request := InitRequest()
+
 // Set some headers
 // CONTENT_LENGTH is automatically added when generating the request.
 request.Headers["COMMAND"] = "SET"
 for i := 0; i < 10; i++ {
 	request.Headers["HEADER-TEST"+strconv.Itoa(i)] = "VALUE-TEST" + strconv.Itoa(i)
 }
+
 // Set request content
 request.Content = []byte(strings.Repeat("TEST_CONTENT\n", 200))
+
+// Initialize client
 client := InitClient("127.0.0.1", 12239)
+// Connect to server
 if err := client.Connect(); err != nil {
 	err = errors.New("error connecting to server: " + err.Error())
 	t.Error(err)
 }
+// Set some "cookies"
 client.Cookies["TEST0"] = InitCookie("TEST0", "TEST0")
 client.Cookies["TEST1"] = InitCookie("TEST1", "TEST1")
 client.Cookies["TEST2"] = InitCookie("TEST2", "TEST2")
@@ -78,5 +84,25 @@ if err := client.Close(); err != nil {
 	err = errors.New("error closing client connection: " + err.Error())
 	t.Error(err)
 }
-
+```
+As you can see, the client receives the response back when sending data to a server. 
+This data fits into the following struct:
+```
+// Response the server sends back
+type Response struct {
+	Headers   map[string]string
+	SetValues map[string]string
+	DelValues []string
+	Content   []byte
+	File      *FileData
+}
+// Request to send to the server
+type Request struct {
+	Headers map[string]string
+	Content []byte
+	File    *FileData
+	Data    map[string]string
+	User    *User
+	Conn    net.Conn
+}
 ```
