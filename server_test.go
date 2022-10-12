@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Nigel2392/tcpproto/typeutils"
+	"github.com/Nigel2392/typeutils"
 )
 
 var Request_Server *Request = InitRequest()

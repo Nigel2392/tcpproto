@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Nigel2392/tcpproto/typeutils"
+	"github.com/Nigel2392/typeutils"
 	"github.com/TwiN/go-color"
 )
 
