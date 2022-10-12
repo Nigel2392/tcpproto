@@ -50,6 +50,11 @@ func main() {
 }
 ```
 
+To add middleware, or callbacks, the function needs to take the following arguments:
+```
+func MiddlewareOrCallback(rq *tcpproto.Request, resp *tcpproto.Response)
+```
+
 ## Client:
 A typical client looks like this:
 ```
