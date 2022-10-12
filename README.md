@@ -6,9 +6,11 @@ This layer is capable of transfering files, authentication, client-side storage 
 A typical response/request looks like this:
 ```
 CONTENT_LENGTH: CONTENT_LENGTH int
-CLIENT_ID: CLIENT_ID int
-MESSAGE_TYPE: MESSAGE_TYPE string
 COMMAND: COMMAND string
+CUSTOM_HEADER: CUSTOM_HEADER string
+CUSTOM_HEADER: CUSTOM_HEADER string
+CUSTOM_HEADER: CUSTOM_HEADER string
+CUSTOM_HEADER: CUSTOM_HEADER string
 HAS_FILE: HAS_FILE bool
 FILE_NAME: FILE_NAME string
 FILE_SIZE: FILE_SIZE int
