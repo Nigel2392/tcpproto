@@ -40,9 +40,9 @@ func main() {
 	ipaddr := "127.0.0.1"
 	port := 22392
 	s := tcpproto.InitServer(ipaddr, port)
-	s.AddMiddlewareAfterResp(tcpproto.LogMiddleware)
-	s.AddMiddlewareBeforeResp(AuthMiddleware)
-	s.AddCallback("SET", SET)
+	s.AddMiddlewareBeforeResp(AuthMiddleware) // Middleware to be called before the callback is called.
+	s.AddMiddlewareAfterResp(tcpproto.LogMiddleware) // Middleware to be called after the callback is called.
+	s.AddCallback("SET", SET) // The callback to be called, derived from "COMMAND" header.
 	s.AddCallback("GET", GET)
 	if err := s.Start(); err != nil {
 		os.Exit(1)
