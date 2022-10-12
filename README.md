@@ -24,12 +24,12 @@ CONTENT CONTENT CONTENT
 CONTENT CONTENT CONTENT
 CONTENT CONTENT CONTENT
 ```
-Where anything that has to do with files, can optionally be left out.
-The following is needed:
-`CONTENT_LENGTH` and `COMMAND`
-Content length is used to make sure the whole request is parsed properly, and chunks we not forgotten.
-Command is used to add callbacks to the request/response cycle, where you can edit either one.
-A typical server looks like this:
+Where anything that has to do with files, can optionally be left out.  
+The following is needed:  
+`CONTENT_LENGTH` and `COMMAND`  
+Content length is used to make sure the whole request is parsed properly, and chunks we not forgotten.  
+Command is used to add callbacks to the request/response cycle, where you can edit either one.  
+A typical server looks like this:  
 ```
 func main() {
 	ipaddr := "127.0.0.1"
