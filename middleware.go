@@ -1,4 +1,4 @@
-package main
+package tcpproto
 
 func LogMiddleware(rq *Request, resp *Response) {
 	if rq.File.Present {

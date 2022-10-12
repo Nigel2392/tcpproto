@@ -1,4 +1,4 @@
-package main
+package tcpproto
 
 type Cookies struct {
 	// Cookies are stored in a map
