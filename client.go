@@ -39,6 +39,10 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) Send(rq *Request) (*Response, error) {
+	for key, val := range c.Cookies {
+		rq.AddCookie(key, val.Value)
+	}
+	// Send the request
 	err := c.send(rq)
 	if err != nil {
 		return nil, err
@@ -101,13 +105,13 @@ func (c *Client) recv_data() (map[string]string, []byte, error) {
 	content_length, err := strconv.Atoi(header["CONTENT_LENGTH"])
 	if err != nil {
 		err = errors.New("invalid content length")
-		LOGGER.Error(err.Error())
+		CONF.LOGGER.Error(err.Error())
 		return nil, nil, err
 	}
 	// Get the rest of content
 	recv_data, err = getContent(c.Conn, recv_data, content_length)
 	if err != nil {
-		LOGGER.Error(err.Error())
+		CONF.LOGGER.Error(err.Error())
 		return nil, nil, err
 	}
 	return header, recv_data, nil
@@ -115,7 +119,6 @@ func (c *Client) recv_data() (map[string]string, []byte, error) {
 
 func (c *Client) send(rq *Request) error {
 	// Send the request
-	rq.Headers["COMMAND"] = "GET"
 	content, err := rq.Generate()
 	if err != nil {
 		return err

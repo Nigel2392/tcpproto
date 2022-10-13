@@ -16,6 +16,7 @@ type User struct {
 
 type Request struct {
 	Headers map[string]string
+	Vault   map[string]string
 	Content []byte
 	File    *FileData
 	Data    map[string]string
@@ -26,6 +27,7 @@ type Request struct {
 func InitRequest() *Request {
 	return &Request{
 		Headers: make(map[string]string),
+		Vault:   make(map[string]string),
 		Content: []byte{},
 		File: &FileData{
 			Name:     "",
@@ -37,6 +39,21 @@ func InitRequest() *Request {
 		Data: make(map[string]string),
 		User: &User{},
 	}
+}
+
+func (rq *Request) AddCookie(key string, value string) {
+	rq.Headers[key] = value
+}
+
+func (rq *Request) DecryptVault() map[string]string {
+	for k, v := range rq.Vault {
+		key, val, ok := CONF.GetVault(v)
+		if ok {
+			rq.Vault[key] = val
+		}
+		delete(rq.Vault, k)
+	}
+	return rq.Vault
 }
 
 func (rq *Request) AddFile(filename string, file []byte, boundary string) {

@@ -2,9 +2,9 @@ package tcpproto
 
 func LogMiddleware(rq *Request, resp *Response) {
 	if rq.File.Present {
-		LOGGER.Info(rq.Headers["CLIENT_ID"] + " " + rq.Headers["COMMAND"] + " sent file: " + rq.File.Name)
+		CONF.LOGGER.Info(rq.Headers["CLIENT_ID"] + " " + rq.Headers["COMMAND"] + " sent file: " + rq.File.Name)
 	} else {
-		LOGGER.Info(rq.Headers["CLIENT_ID"] + " " + rq.Headers["COMMAND"])
+		CONF.LOGGER.Info(rq.Headers["CLIENT_ID"] + " " + rq.Headers["COMMAND"])
 	}
 }
 

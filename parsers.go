@@ -3,8 +3,10 @@ package tcpproto
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
+	"strings"
 )
 
 // Format of message looks like this
@@ -50,25 +52,25 @@ func (rq *Request) ParseFile() error {
 				file_name, ok := rq.Headers["FILE_NAME"]
 				if !ok {
 					err := errors.New("file name not found")
-					LOGGER.Error(err.Error())
+					CONF.LOGGER.Error(err.Error())
 					return err
 				}
 				file_size, ok := rq.Headers["FILE_SIZE"]
 				if !ok {
 					err := errors.New("file size not found")
-					LOGGER.Error(err.Error())
+					CONF.LOGGER.Error(err.Error())
 					return err
 				}
 				file_boundary, ok := rq.Headers["FILE_BOUNDARY"]
 				if !ok {
 					err := errors.New("file boundary not found")
-					LOGGER.Error(err.Error())
+					CONF.LOGGER.Error(err.Error())
 					return err
 				}
 				file_size_int, err := strconv.Atoi(file_size)
 				if err != nil {
 					err := errors.New("invalid file size")
-					LOGGER.Error(err.Error())
+					CONF.LOGGER.Error(err.Error())
 					return err
 				}
 				// Set up file
@@ -79,7 +81,7 @@ func (rq *Request) ParseFile() error {
 				_, err = rq.ParseFileData()
 				if err != nil {
 					// rq.Errors = append(rq.Errors, err)
-					LOGGER.Error(err.Error())
+					CONF.LOGGER.Error(err.Error())
 					return err
 				}
 			}
@@ -166,7 +168,7 @@ func parseHeader(data []byte) (map[string]string, []byte, error) {
 			line_data := bytes.Split(bytes.TrimSpace(line), []byte(":"))
 			if len(line_data) != 2 {
 				err := errors.New("invalid header")
-				LOGGER.Error(err.Error())
+				CONF.LOGGER.Error(err.Error())
 				return nil, nil, err
 			}
 			header[string(line_data[0])] = string(line_data[1])
@@ -176,7 +178,7 @@ func parseHeader(data []byte) (map[string]string, []byte, error) {
 	} else {
 		// Message is not formatted correctly
 		err := errors.New("invalid header")
-		LOGGER.Error(err.Error())
+		CONF.LOGGER.Error(err.Error())
 		return nil, nil, err
 	}
 }
@@ -190,7 +192,7 @@ func ParseConnection(conn net.Conn) (*Request, *Response, error) {
 	// Parse the header
 	header, recv_data, err := parseHeader(data_part_one)
 	if err != nil {
-		LOGGER.Error(err.Error())
+		CONF.LOGGER.Error(err.Error())
 		return nil, nil, err
 	}
 
@@ -198,21 +200,21 @@ func ParseConnection(conn net.Conn) (*Request, *Response, error) {
 	content_length, err := strconv.Atoi(header["CONTENT_LENGTH"])
 	if err != nil {
 		err = errors.New("invalid content length")
-		LOGGER.Error(err.Error())
+		CONF.LOGGER.Error(err.Error())
 		return nil, nil, err
 	}
 
 	// Read the rest of the content.
 	recv_data, err = getContent(conn, recv_data, content_length)
 	if err != nil {
-		LOGGER.Error(err.Error())
+		CONF.LOGGER.Error(err.Error())
 		return nil, nil, err
 	}
 
 	// Verify content length
 	if len(recv_data) != content_length {
 		err = errors.New("content length mismatch")
-		LOGGER.Error(err.Error())
+		CONF.LOGGER.Error(err.Error())
 		return nil, nil, err
 	}
 	// Initialize request
@@ -224,6 +226,9 @@ func ParseConnection(conn net.Conn) (*Request, *Response, error) {
 	// Create the response
 	resp := InitResponse()
 
+	// Transfer the vault
+	TransferValues(rq, resp)
+
 	// Parse the file if one exists:
 	err = rq.ParseFile()
 	if err != nil {
@@ -233,7 +238,7 @@ func ParseConnection(conn net.Conn) (*Request, *Response, error) {
 }
 
 func getHeader(conn net.Conn) ([]byte, error) {
-	data_part_one := make([]byte, BUFF_SIZE)
+	data_part_one := make([]byte, CONF.BUFF_SIZE)
 	_, err := conn.Read(data_part_one)
 	if err != nil {
 		err = errors.New("error reading header")
@@ -241,7 +246,7 @@ func getHeader(conn net.Conn) ([]byte, error) {
 	}
 
 	for !bytes.Contains(data_part_one, []byte("\n\n")) {
-		data_part_two := make([]byte, BUFF_SIZE)
+		data_part_two := make([]byte, CONF.BUFF_SIZE)
 		_, err := conn.Read(data_part_two)
 		if err != nil {
 			err = errors.New("invalid header")
@@ -258,7 +263,7 @@ func getContent(conn net.Conn, recv_data []byte, content_length int) ([]byte, er
 	} else {
 		// Read the rest of the data
 		for len(recv_data) < content_length {
-			data := make([]byte, BUFF_SIZE)
+			data := make([]byte, CONF.BUFF_SIZE)
 			_, err := conn.Read(data)
 			if err != nil {
 				return nil, err
@@ -269,4 +274,18 @@ func getContent(conn net.Conn, recv_data []byte, content_length int) ([]byte, er
 	}
 
 	return recv_data, nil
+}
+
+func TransferValues(rq *Request, resp *Response) {
+	for key, value := range rq.Headers {
+		if strings.Contains(key, "VAULT-") {
+			key, value, ok := CONF.GetVault(value)
+			if ok {
+				resp.Vault[key] = value
+			} else {
+				CONF.LOGGER.Error(fmt.Sprintf("Vault key %s not found", value))
+			}
+		}
+	}
+
 }

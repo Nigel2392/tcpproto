@@ -2,9 +2,9 @@ package tcpproto
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"strconv"
+	"sync"
 )
 
 type Middleware struct {
@@ -16,6 +16,7 @@ type Middleware struct {
 type Server struct {
 	ln         net.Listener
 	IP         string
+	Config     *Config
 	Port       int
 	Callbacks  map[string]func(rq *Request, resp *Response)
 	Middleware []*Middleware
@@ -61,25 +62,41 @@ func (s *Server) Serve() error {
 
 func (s *Server) handle(conn net.Conn) {
 	defer conn.Close()
-	// Parse the request
-	rq, resp, err := ParseConnection(conn)
-	if err != nil {
-		// LOGGER.Error(err)
-		return
-	}
-	// Handle middleware before response
-	s.MiddlewareBeforeResponse(rq, resp)
+	wg := &sync.WaitGroup{}
+	for {
+		wg.Add(1)
+		// Parse the request
+		go func(wg *sync.WaitGroup) {
+			defer wg.Done()
+			rq, resp, err := ParseConnection(conn)
+			if err != nil {
+				// LOGGER.Error(err)
+				return
+			}
 
-	// Handle the request
-	s.ExecCallback(rq, resp)
+			// Execute authentication
+			err = CONF.Default_Auth(rq, resp)
+			if err != nil {
+				// LOGGER.Error(err)
+				return
+			}
 
-	// Handle middleware after response
-	s.MiddlewareAfterResponse(rq, resp)
+			// Handle middleware before response
+			s.MiddlewareBeforeResponse(rq, resp)
 
-	// LOGGER.Debug("Sending response")
-	err = s.Send(conn, resp)
-	if err != nil {
-		return
+			// Handle the request
+			s.ExecCallback(rq, resp)
+
+			// Handle middleware after response
+			s.MiddlewareAfterResponse(rq, resp)
+
+			// LOGGER.Debug("Sending response")
+			err = s.Send(conn, resp)
+			if err != nil {
+				return
+			}
+		}(wg)
+		wg.Wait()
 	}
 }
 
@@ -134,11 +151,21 @@ func (s *Server) ExecCallback(rq *Request, resp *Response) error {
 }
 
 func (s *Server) Send(conn net.Conn, resp *Response) error {
-	fmt.Println("Sending response")
+	if resp.Error != nil {
+		if len(resp.Error) > 0 {
+			resp = InitResponse()
+			resp.Headers["ERROR"] = "Internal Server Error"
+			err_resp := ""
+			for _, err := range resp.Error {
+				err_resp += err.Error() + "\n"
+			}
+			resp.Content = []byte(err_resp)
+		}
+	}
 	_, err := conn.Write(resp.Bytes())
 	if err != nil {
 		err = errors.New("error sending response: " + err.Error())
-		LOGGER.Error(err.Error())
+		CONF.LOGGER.Error(err.Error())
 		return err
 	}
 	return nil

@@ -2,8 +2,10 @@ package tcpproto
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/Nigel2392/typeutils"
@@ -22,7 +24,6 @@ func TEST_REQUESTS(rq *Request, resp *Response) {
 
 	// Delete cookie "TEST1"
 	resp.Forget("TEST1")
-
 	SERVER_REQUEST <- rq
 }
 
@@ -63,9 +64,9 @@ func Test_Requests(t *testing.T) {
 			err = errors.New("error sending request: " + err.Error())
 			t.Error(err)
 		}
-		// LOGGER.Test("(LONG) SetValues: " + fmt.Sprintf("%v", respone.SetValues))
-		// LOGGER.Test("(LONG) Headers: " + fmt.Sprintf("%v", respone.Headers))
-		// LOGGER.Test("(LONG) Closing client connection")
+		// CONF.LOGGER.Test("(LONG) SetValues: " + fmt.Sprintf("%v", respone.SetValues))
+		// CONF.LOGGER.Test("(LONG) Headers: " + fmt.Sprintf("%v", respone.Headers))
+		// CONF.LOGGER.Test("(LONG) Closing client connection")
 		if err := client.Close(); err != nil {
 			err = errors.New("error closing client connection: " + err.Error())
 			t.Error(err)
@@ -140,11 +141,10 @@ func Test_Requests(t *testing.T) {
 
 }
 
-var Request_Server_LONG *Request = InitRequest()
+var Request_Server_LONG *Request
 var SERVER_REQUEST_LONG chan *Request = make(chan *Request)
 
 func TEST_REQUESTS_LONG(rq *Request, resp *Response) {
-	resp.Headers["TEST"] = "TEST"
 	resp.Headers["COMMAND"] = rq.Headers["COMMAND"]
 	resp.Content = []byte("TEST")
 	for i := 0; i < 3; i++ {
@@ -152,20 +152,30 @@ func TEST_REQUESTS_LONG(rq *Request, resp *Response) {
 	}
 
 	// Delete cookie "TEST1"
-	LOGGER.Test("(LONG) Deleting cookie TEST1")
+	CONF.LOGGER.Test("(LONG) Deleting cookie TEST1")
 	resp.Forget("TEST1")
+	if Request_Server_LONG == nil {
+		CONF.LOGGER.Test("(LONG) Locking \"TEST\"")
+		resp.Lock("TEST_LOCK", "TEST_LOCK")
 
-	SERVER_REQUEST_LONG <- rq
+		CONF.LOGGER.Test("(LONG) Pushing to channel")
+		SERVER_REQUEST_LONG <- rq
+	} else {
+		CONF.LOGGER.Test("(LONG) Request already received")
+		CONF.LOGGER.Info("RESP SETVALUES:" + fmt.Sprintf("%v", resp.SetValues))
+		CONF.LOGGER.Info("RESP VAULT:" + fmt.Sprintf("%v", resp.Vault))
+		CONF.LOGGER.Info("REQUEST HEADERS:" + fmt.Sprintf("%v", rq.Headers))
+	}
 }
 
 func Test_Requests_LONG(t *testing.T) {
+	wg := &sync.WaitGroup{}
 	server := InitServer("127.0.0.1", 22239)
 	server.AddMiddlewareBeforeResp(TEST_REQUESTS_LONG)
 	request := InitRequest()
-	request.Headers["COMMAND"] = "TEST_REQUESTS"
-	request.Headers["MESSAGE_TYPE"] = "TEST_REQUESTS"
+	request.Headers["COMMAND"] = "not-needed-for-tests"
 	// Add file
-	request.AddFile("test.txt", []byte(strings.Repeat("TEST_FILE\n", 200)), "BOUNDARYYYYYYY")
+	request.AddFile("test.txt", []byte(strings.Repeat("TEST_FILE_CONTENT\n", 200)), "THIS_IS_MY_FILE_BOUNDARY")
 
 	for i := 0; i < 100; i++ {
 		request.Headers["TEST"+strconv.Itoa(i)] = "TEST" + strconv.Itoa(i)
@@ -189,8 +199,10 @@ func Test_Requests_LONG(t *testing.T) {
 	client.Cookies["TEST0"] = InitCookie("TEST0", "TEST0")
 	client.Cookies["TEST1"] = InitCookie("TEST1", "TEST1")
 	client.Cookies["TEST2"] = InitCookie("TEST2", "TEST2")
-	go func(client *Client) {
-		LOGGER.Test("(LONG) Sending request")
+	wg.Add(1)
+	go func(client *Client, wg *sync.WaitGroup) {
+		defer wg.Done()
+		CONF.LOGGER.Test("(LONG) Sending request")
 		var respone *Response = InitResponse()
 		var err error = nil
 		respone, err = client.Send(request)
@@ -198,51 +210,47 @@ func Test_Requests_LONG(t *testing.T) {
 			err = errors.New("error sending request (LONG): " + err.Error())
 			t.Error(err)
 		}
-		LOGGER.Test("(LONG) Response received, Content length: " + strconv.Itoa(respone.ContentLength()))
-		// LOGGER.Test("(LONG) SetValues: " + fmt.Sprintf("%v", respone.SetValues))
-		// LOGGER.Test("(LONG) Headers: " + fmt.Sprintf("%v", respone.Headers))
-		// LOGGER.Test("(LONG) Closing client connection")
-		if err := client.Close(); err != nil {
-			err = errors.New("error closing client connection: " + err.Error())
-			t.Error(err)
-		}
+		CONF.LOGGER.Test("(LONG) Response received, Content length: " + strconv.Itoa(respone.ContentLength()))
+		// CONF.LOGGER.Test("(LONG) SetValues: " + fmt.Sprintf("%v", respone.SetValues))
+		// CONF.LOGGER.Test("(LONG) Headers: " + fmt.Sprintf("%v", respone.Headers))
 		_, ok := client.Cookies["TEST1"]
-		LOGGER.Test("(LONG) Testing cookie TEST1 found: " + strconv.FormatBool(ok) + "\n")
+		CONF.LOGGER.Test("(LONG) Testing cookie TEST1 found: " + strconv.FormatBool(ok) + "\n")
 		if ok {
 			t.Error("Cookie TEST1 was not deleted")
 		}
-	}(client)
+		CONF.LOGGER.Test("(LONG) Cookies: " + fmt.Sprintf("%v", client.Cookies))
+	}(client, wg)
 	// Wait for server to receive request
 	Request_Server_LONG = <-SERVER_REQUEST_LONG
 	// Set up contentlengths
 	rqtlen := request.ContentLength()
 	rqslen := Request_Server_LONG.ContentLength()
-	LOGGER.Test("(LONG) Testing contentlengths: " + strconv.Itoa(rqtlen) + " == " + strconv.Itoa(rqslen))
+	CONF.LOGGER.Test("(LONG) Testing contentlengths: " + strconv.Itoa(rqtlen) + " == " + strconv.Itoa(rqslen))
 	if rqtlen != rqslen {
 		t.Error("Content length mismatch: request.ContentLength()  !=  Request_Server_LONG.ContentLength()")
 		t.Error("request.ContentLength(): ", rqtlen)
 		t.Error("Request_Server_LONG.ContentLength(): ", rqslen)
 		t.Error("request.ContentLength() == Request_Server_LONG.ContentLength(): ", rqtlen == rqslen)
 	}
-	LOGGER.Test("(LONG) Testing content")
+	CONF.LOGGER.Test("(LONG) Testing content")
 	if string(request.Content) != string(Request_Server_LONG.Content) {
 		t.Error("Content mismatch (LONG): string(request.Content) != string(Request_Server_LONG.Content)")
-		LOGGER.Error("Length content: " + strconv.Itoa(len(request.Content)))
-		LOGGER.Error("Server content length: " + strconv.Itoa(len(Request_Server_LONG.Content)))
+		CONF.LOGGER.Error("Length content: " + strconv.Itoa(len(request.Content)))
+		CONF.LOGGER.Error("Server content length: " + strconv.Itoa(len(Request_Server_LONG.Content)))
 	}
-	LOGGER.Test("(LONG) Generating request")
+	CONF.LOGGER.Test("(LONG) Generating request")
 	rqt, err := request.Generate()
 	if err != nil {
 		err = errors.New("error generating request from request test (LONG): " + err.Error())
 		t.Error(err)
 	}
-	LOGGER.Test("(LONG) Parsing header")
+	CONF.LOGGER.Test("(LONG) Parsing header")
 	headers_test, content_test, err := parseHeader(rqt)
 	if err != nil {
 		err = errors.New("error parsing header (LONG): " + err.Error())
 		t.Error(err)
 	}
-	LOGGER.Test("(LONG) Validating headers")
+	CONF.LOGGER.Test("(LONG) Validating headers")
 	for key, value := range request.Headers {
 		key, ok := headers_test[key]
 		if !ok {
@@ -253,21 +261,21 @@ func Test_Requests_LONG(t *testing.T) {
 		}
 	}
 
-	LOGGER.Test("(LONG) Generating request")
+	CONF.LOGGER.Test("(LONG) Generating request")
 	rqs, err := Request_Server_LONG.Generate()
 	if err != nil {
 		err = errors.New("error generating request from server request (LONG): " + err.Error())
 		t.Error(err)
 	}
 
-	LOGGER.Test("(LONG) Parsing header")
+	CONF.LOGGER.Test("(LONG) Parsing header")
 	headers_server, content_server, err := parseHeader(rqs)
 	if err != nil {
 		err = errors.New("error parsing header (LONG): " + err.Error())
 		t.Error(err)
 	}
 
-	LOGGER.Test("(LONG) Validating headers")
+	CONF.LOGGER.Test("(LONG) Validating headers")
 	for key, value := range Request_Server_LONG.Headers {
 		key, ok := headers_server[key]
 		if !ok {
@@ -280,18 +288,61 @@ func Test_Requests_LONG(t *testing.T) {
 	}
 
 	if request.File.Present {
-		LOGGER.Test("(LONG) Validating file")
+		CONF.LOGGER.Test("(LONG) Validating file")
 		if string(content_test) != string(content_server) {
 			t.Error("Content mismatch (LONG): string(content_test) != string(content_server)")
-			LOGGER.Error("Length content: " + strconv.Itoa(len(request.Content)))
-			LOGGER.Error("Server content length: " + strconv.Itoa(len(Request_Server_LONG.Content)))
+			CONF.LOGGER.Error("Length content: " + strconv.Itoa(len(request.Content)))
+			CONF.LOGGER.Error("Server content length: " + strconv.Itoa(len(Request_Server_LONG.Content)))
 		}
 
 		if string(request.File.Content) != string(Request_Server_LONG.File.Content) {
 			t.Error("File content mismatch (LONG): string(request.File.Content) != string(Request_Server_LONG.File.Content)")
-			LOGGER.Error("Length content: " + strconv.Itoa(len(request.File.Content)))
-			LOGGER.Error("Server content length: " + strconv.Itoa(len(Request_Server_LONG.File.Content)))
+			CONF.LOGGER.Error("Length content: " + strconv.Itoa(len(request.File.Content)))
+			CONF.LOGGER.Error("Server content length: " + strconv.Itoa(len(Request_Server_LONG.File.Content)))
 		}
 	}
+	// Create new request
+	request = InitRequest()
+	wg.Add(1)
+	go func(client *Client, wg *sync.WaitGroup) {
+		defer wg.Done()
+		request.Headers["COMMAND"] = "not-needed-for-tests"
+		request.Content = []byte(strings.Repeat("TEST_CONTENT\n", 10000000/16)) // 10000000/16*13 = 0.008125GB
+		resp, err := client.Send(request)
+		if err != nil {
+			err = errors.New("error sending request (LONG): " + err.Error())
+			t.Error(err.Error())
+		}
+		if resp == nil {
+			t.Error("response is nil (LONG)")
+		}
+		if err != nil {
+			err = errors.New("error generating vault (LONG): " + err.Error())
+			t.Error(err.Error())
+		}
+		flag := false
+		for _, cookie := range client.Cookies {
+			if cookie.Name == "VAULT-TEST_LOCK" {
+				flag = true
+				key, value, ok := CONF.GetVault(cookie.Value)
+				if !ok {
+					t.Error("vault not found (LONG)")
+				}
+				if key != "TEST_LOCK" || value != "TEST_LOCK" {
+					t.Error("vault mismatch (LONG): " + cookie.Value)
+				}
+				CONF.LOGGER.Test("(LONG) Vault found: " + key + " == " + value)
+			}
+		}
+		if !flag {
+			t.Error("Vault not found (LONG)")
+		}
+	}(client, wg)
+	wg.Wait()
 
+	// CONF.LOGGER.Test("(LONG) Closing client connection")
+	if err := client.Close(); err != nil {
+		err = errors.New("error closing client connection: " + err.Error())
+		t.Error(err)
+	}
 }

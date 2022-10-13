@@ -12,8 +12,14 @@ type Response struct {
 	Headers   map[string]string
 	SetValues map[string]string
 	DelValues []string
+	Vault     map[string]string
 	Content   []byte
 	File      *FileData
+	Error     []error
+}
+
+func (resp *Response) AddError(err string) {
+	resp.Error = append(resp.Error, errors.New(err))
 }
 
 func InitResponse() *Response {
@@ -21,9 +27,16 @@ func InitResponse() *Response {
 		Headers:   make(map[string]string),
 		SetValues: make(map[string]string),
 		DelValues: make([]string, 0),
+		Vault:     make(map[string]string),
 		Content:   make([]byte, 0),
 		File:      &FileData{},
+		Error:     make([]error, 0),
 	}
+}
+
+func (resp *Response) Lock(key string, value string) *Response {
+	resp.Vault[key] = value
+	return resp
 }
 
 func (resp *Response) Remember(k string, v string) *Response {
@@ -34,6 +47,10 @@ func (resp *Response) Remember(k string, v string) *Response {
 func (resp *Response) Forget(key string) *Response {
 	resp.DelValues = append(resp.DelValues, key)
 	return resp
+}
+
+func (resp *Response) ForgetVault(key string) {
+	resp.DelValues = append(resp.DelValues, key)
 }
 
 func (resp *Response) AddFile(filename string, file []byte, boundary string) {
@@ -62,6 +79,9 @@ func (resp *Response) DecodeHeaders(headers map[string]string) (map[string]strin
 			}
 			// Set the cookie
 			resp.SetValues[split[0]] = split[1]
+			delete(headers, k)
+		} else if strings.HasPrefix(k, "VAULT-") {
+			resp.SetValues[k] = v
 			delete(headers, k)
 		} else if strings.HasPrefix(k, "FORGET-") {
 			// Delete the cookie
@@ -102,14 +122,24 @@ func (resp *Response) Generate() []byte {
 		content = append(resp.File.Content, content...)
 		content = append(resp.File.StartBoundary(), content...)
 	}
+
 	// Add content length
 	resp.Headers["CONTENT_LENGTH"] = strconv.Itoa(resp.ContentLength())
+	// Generate the header
+	header := resp.GenHeader()
+	// Add header to content
+	content = append([]byte(header), content...)
+	return content
+}
+
+func (resp *Response) GenHeader() string {
 	// Add headers
 	// Generate the header
 	header := ""
 	for key, value := range resp.Headers {
 		header += key + ":" + value + "\n"
 	}
+
 	// Write "cookie" values onto the header
 	index := 0
 	for key, value := range resp.SetValues {
@@ -117,15 +147,26 @@ func (resp *Response) Generate() []byte {
 		value = base64.StdEncoding.EncodeToString([]byte(value))
 		header += "REMEMBER-" + strconv.Itoa(index) + ":" + key + "%EQUALS%" + value + "\n"
 	}
+
+	// Write to the vault
+	index = 0
+	for key, value := range resp.Vault {
+		index += 1
+		// Encrypt the vault key and value
+		val, err := CONF.GenVault(key, value)
+		if err != nil {
+			continue
+		}
+		header += "VAULT-" + key + ":" + val + "\n"
+	}
+
 	// Write "forget" values onto the header
 	for i, value := range resp.DelValues {
 		header += "FORGET-" + strconv.Itoa(i) + ":" + value + "\n"
 	}
 
 	header += "\n"
-	// Add header to content
-	content = append([]byte(header), content...)
-	return content
+	return header
 }
 
 func (resp *Response) Bytes() []byte {
@@ -143,25 +184,25 @@ func (resp *Response) ParseFile() error {
 				file_name, ok := resp.Headers["FILE_NAME"]
 				if !ok {
 					err := errors.New("file name not found")
-					LOGGER.Error(err.Error())
+					CONF.LOGGER.Error(err.Error())
 					return err
 				}
 				file_size, ok := resp.Headers["FILE_SIZE"]
 				if !ok {
 					err := errors.New("file size not found")
-					LOGGER.Error(err.Error())
+					CONF.LOGGER.Error(err.Error())
 					return err
 				}
 				file_boundary, ok := resp.Headers["FILE_BOUNDARY"]
 				if !ok {
 					err := errors.New("file boundary not found")
-					LOGGER.Error(err.Error())
+					CONF.LOGGER.Error(err.Error())
 					return err
 				}
 				file_size_int, err := strconv.Atoi(file_size)
 				if err != nil {
 					err := errors.New("invalid file size")
-					LOGGER.Error(err.Error())
+					CONF.LOGGER.Error(err.Error())
 					return err
 				}
 				// Set up file
@@ -172,7 +213,7 @@ func (resp *Response) ParseFile() error {
 				_, err = resp.ParseFileData()
 				if err != nil {
 					// resp.Errors = append(resp.Errors, err)
-					LOGGER.Error(err.Error())
+					CONF.LOGGER.Error(err.Error())
 					return err
 				}
 			}
