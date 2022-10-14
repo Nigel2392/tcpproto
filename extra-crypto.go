@@ -1,10 +1,10 @@
 package tcpproto
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"strings"
 )
 
 func Encrypt(key, data []byte) ([]byte, error) {
@@ -48,32 +48,16 @@ func Decrypt(key, data []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
-func PKCS5Padding(src []byte, blockSize int) []byte {
-	padding := blockSize - len(src)%blockSize
-	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
-	return append(src, padtext...)
-}
-
-func PKCS5UnPadding(src []byte) []byte {
-	length := len(src)
-	unpadding := int(src[length-1])
-	return src[:(length - unpadding)]
-}
-
-func SimplePadding(src []byte, blockSize int) []byte {
-	padding := blockSize - len(src)%blockSize
-	padtext := bytes.Repeat([]byte{0}, padding)
-	return append(src, padtext...)
-}
-
-func SimpleUnPadding(src []byte) []byte {
-	length := len(src)
-	unpadding := 0
-	for i := length - 1; i >= 0; i-- {
-		if src[i] != 0 {
-			break
-		}
-		unpadding++
+func PadStr(s string, l int) string {
+	if len(s) > l {
+		return s[:l]
 	}
-	return src[:(length - unpadding)]
+	return s + strings.Repeat("$", l-len(s))
+}
+
+func UnpadStr(s string) string {
+	for strings.HasSuffix(s, "$") {
+		s = s[:len(s)-1]
+	}
+	return s
 }

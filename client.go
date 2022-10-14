@@ -42,6 +42,24 @@ func (c *Client) Send(rq *Request) (*Response, error) {
 	for key, val := range c.Cookies {
 		rq.AddCookie(key, val.Value)
 	}
+
+	if CONF.Include_Sysinfo {
+		sysinfo := GetSysInfo()
+		rq.Headers["SYSINFO"] = sysinfo.ToJSON()
+		//rq.AddCookie("SYSINFO_HOSTNAME", sysinfo.Hostname)
+		//rq.AddCookie("SYSINFO_PLATFORM", sysinfo.Platform)
+		//rq.AddCookie("SYSINFO_CPU", sysinfo.CPU)
+		//rq.AddCookie("SYSINFO_RAM", fmt.Sprintf("%d", sysinfo.RAM))
+		//rq.AddCookie("SYSINFO_DISK", fmt.Sprintf("%d", sysinfo.Disk))
+	}
+
+	if CONF.Include_MACaddr {
+		mac, err := GetMACAddr()
+		if err == nil {
+			rq.AddCookie("MACaddr", mac)
+		}
+	}
+
 	// Send the request
 	err := c.send(rq)
 	if err != nil {

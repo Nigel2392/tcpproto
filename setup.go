@@ -6,25 +6,29 @@ import (
 )
 
 type Config struct {
-	SecretKey    string
-	LOGGER       *Logger
-	BUFF_SIZE    int
-	Default_Auth func(rq *Request, resp *Response) error
+	SecretKey       string
+	LOGGER          *Logger
+	BUFF_SIZE       int
+	Default_Auth    func(rq *Request, resp *Response) error
+	Include_MACaddr bool
+	Include_Sysinfo bool
 }
 
-func InitConfig(secret_key string, loglevel string, buff_size int, authenticate func(rq *Request, resp *Response) error) *Config {
+func InitConfig(secret_key string, loglevel string, buff_size int, include_MACaddr bool, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
 	return &Config{
-		SecretKey:    secret_key,
-		LOGGER:       NewLogger(loglevel),
-		BUFF_SIZE:    buff_size,
-		Default_Auth: authenticate,
+		SecretKey:       secret_key,
+		LOGGER:          NewLogger(loglevel),
+		BUFF_SIZE:       buff_size,
+		Include_MACaddr: include_MACaddr,
+		Include_Sysinfo: include_sysinfo,
+		Default_Auth:    authenticate,
 	}
 }
 
-var CONF = InitConfig("SECRET_KEYSECRET_KEYSECRET_KEY12", "DEBUG", 2048, Authenticate)
+var CONF = InitConfig("SECRET_KEY", "DEBUG", 2048, true, true, Authenticate)
 
-func SetConfig(secret_key string, loglevel string, buff_size int, authenticate func(rq *Request, resp *Response) error) *Config {
-	CONF = InitConfig(secret_key, loglevel, buff_size, authenticate)
+func SetConfig(secret_key string, loglevel string, buff_size int, include_MACaddr bool, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
+	CONF = InitConfig(secret_key, loglevel, buff_size, include_MACaddr, include_sysinfo, authenticate)
 	return CONF
 }
 
@@ -34,7 +38,7 @@ func Authenticate(rq *Request, resp *Response) error {
 
 func (c *Config) GenVault(key string, value string) (string, error) {
 	// Encrypt the value
-	encrypted, err := Encrypt([]byte(c.SecretKey), []byte(key+"%EQUALS%"+value))
+	encrypted, err := Encrypt([]byte(PadStr(c.SecretKey, 32)), []byte(key+"%EQUALS%"+value))
 	if err != nil {
 		c.LOGGER.Error(err.Error())
 		return "", err
@@ -50,7 +54,7 @@ func (c *Config) GetVault(value string) (string, string, bool) {
 		c.LOGGER.Error(err.Error())
 		return "", "", false
 	}
-	decrypted, err := Decrypt([]byte(c.SecretKey), decoded)
+	decrypted, err := Decrypt([]byte(PadStr(c.SecretKey, 32)), decoded)
 	if err != nil {
 		c.LOGGER.Error(err.Error())
 		return "", "", false

@@ -12,6 +12,7 @@ type User struct {
 	Password        string
 	IsAdmin         bool
 	IsAuthenticated bool
+	SysInfo         *SysInfo
 }
 
 type Request struct {
@@ -82,6 +83,7 @@ func (rq *Request) Generate() ([]byte, error) {
 	header := ""
 	// Set up file if present
 	content := rq.Content
+
 	if rq.File.Present {
 		rq.Headers["FILE_NAME"] = rq.File.Name
 		rq.Headers["FILE_SIZE"] = strconv.Itoa(rq.File.Size)

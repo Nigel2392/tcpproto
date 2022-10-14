@@ -39,6 +39,11 @@ func (resp *Response) Lock(key string, value string) *Response {
 	return resp
 }
 
+func (resp *Response) GetVault(key string) (string, bool) {
+	vault, ok := resp.Vault[key]
+	return vault, ok
+}
+
 func (resp *Response) Remember(k string, v string) *Response {
 	resp.SetValues[k] = v
 	return resp

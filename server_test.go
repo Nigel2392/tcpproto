@@ -40,6 +40,8 @@ func Test_Requests(t *testing.T) {
 
 	request.Content = []byte(typeutils.Repeat("TEST_CONTENT\n", 200))
 
+	request.AddFile("TEST_FILE", []byte(strings.Repeat("TEST_FILE_CONTENT\n", 200)), "MYBOUNDS")
+
 	go func() {
 		err := server.Start()
 		if err != nil {
@@ -104,12 +106,12 @@ func Test_Requests(t *testing.T) {
 		t.Error(err)
 	}
 	for key, value := range request.Headers {
-		key, ok := headers_test[key]
+		val, ok := headers_test[key]
 		if !ok {
 			t.Error("Test header key mismatch: " + key)
 		}
-		if key != value {
-			t.Error("Test header mismatch: " + key)
+		if val != value {
+			t.Error("Test header mismatch: " + val)
 		}
 	}
 
@@ -252,12 +254,12 @@ func Test_Requests_LONG(t *testing.T) {
 	}
 	CONF.LOGGER.Test("(LONG) Validating headers")
 	for key, value := range request.Headers {
-		key, ok := headers_test[key]
+		val, ok := headers_test[key]
 		if !ok {
 			t.Error("Test header key mismatch (LONG): " + key)
 		}
-		if key != value {
-			t.Error("Test header mismatch (LONG): " + key)
+		if val != value {
+			t.Error("Test header mismatch (LONG): " + val + " != " + value)
 		}
 	}
 

@@ -163,21 +163,22 @@ func parseHeader(data []byte) (map[string]string, []byte, error) {
 		header_lines := bytes.Split(header_data, []byte("\n"))
 		for _, line := range header_lines {
 			// Remove spaces
-			line = bytes.Replace(line, []byte(" "), []byte(""), -1)
+			// line = bytes.Replace(line, []byte(" "), []byte(""), -1)
 			// Split the line into key value
-			line_data := bytes.Split(bytes.TrimSpace(line), []byte(":"))
+			line_data := bytes.SplitN(bytes.TrimSpace(line), []byte(":"), 2)
 			if len(line_data) != 2 {
-				err := errors.New("invalid header")
+				err := errors.New("invalid key:value split")
 				CONF.LOGGER.Error(err.Error())
 				return nil, nil, err
 			}
+			line_data[0] = bytes.Replace(line_data[0], []byte(" "), []byte(""), -1)
 			header[string(line_data[0])] = string(line_data[1])
 		}
 		// Return the header and message
 		return header, message_data, nil
 	} else {
 		// Message is not formatted correctly
-		err := errors.New("invalid header")
+		err := errors.New("header not formatted correctly")
 		CONF.LOGGER.Error(err.Error())
 		return nil, nil, err
 	}
@@ -249,7 +250,7 @@ func getHeader(conn net.Conn) ([]byte, error) {
 		data_part_two := make([]byte, CONF.BUFF_SIZE)
 		_, err := conn.Read(data_part_two)
 		if err != nil {
-			err = errors.New("invalid header")
+			err = errors.New("error combining header")
 			return nil, err
 		}
 		data_part_one = append(data_part_one, data_part_two...)
