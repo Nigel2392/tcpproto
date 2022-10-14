@@ -1,6 +1,7 @@
 package tcpproto
 
 import (
+	"crypto/rsa"
 	"errors"
 	"net"
 	"strconv"
@@ -20,15 +21,17 @@ type Server struct {
 	Port       int
 	Callbacks  map[string]func(rq *Request, resp *Response)
 	Middleware []*Middleware
+	PRIVKEY    *rsa.PrivateKey
 }
 
-func InitServer(ip string, port int) *Server {
+func InitServer(ip string, port int, privkey_file string) *Server {
 	srv := &Server{
 		IP:         ip,
 		Port:       port,
 		Callbacks:  make(map[string]func(rq *Request, resp *Response)),
 		Middleware: []*Middleware{},
 	}
+	srv.PRIVKEY = ImportPrivate_PEM_Key(privkey_file)
 	return srv
 }
 
@@ -68,7 +71,7 @@ func (s *Server) handle(conn net.Conn) {
 		// Parse the request
 		go func(wg *sync.WaitGroup) {
 			defer wg.Done()
-			rq, resp, err := ParseConnection(conn)
+			rq, resp, err := s.ParseConnection(conn)
 			if err != nil {
 				// LOGGER.Error(err)
 				return

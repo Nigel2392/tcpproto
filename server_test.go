@@ -1,6 +1,7 @@
 package tcpproto
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -28,7 +29,7 @@ func TEST_REQUESTS(rq *Request, resp *Response) {
 }
 
 func Test_Requests(t *testing.T) {
-	server := InitServer("127.0.0.1", 12239)
+	server := InitServer("127.0.0.1", 12239, "PRIVKEY.pem")
 	server.AddMiddlewareBeforeResp(TEST_REQUESTS)
 	request := InitRequest()
 	request.Headers["COMMAND"] = "TEST_REQUESTS"
@@ -50,7 +51,7 @@ func Test_Requests(t *testing.T) {
 		}
 	}()
 
-	client := InitClient("127.0.0.1", 12239)
+	client := InitClient("127.0.0.1", 12239, "PUBKEY.pem")
 	if err := client.Connect(); err != nil {
 		err = errors.New("error connecting to server: " + err.Error())
 		t.Error(err)
@@ -167,12 +168,13 @@ func TEST_REQUESTS_LONG(rq *Request, resp *Response) {
 		CONF.LOGGER.Info("RESP SETVALUES:" + fmt.Sprintf("%v", resp.SetValues))
 		CONF.LOGGER.Info("RESP VAULT:" + fmt.Sprintf("%v", resp.Vault))
 		CONF.LOGGER.Info("REQUEST HEADERS:" + fmt.Sprintf("%v", rq.Headers))
+		CONF.LOGGER.Info("REQUEST DATA:" + fmt.Sprintf("%v", rq.Data))
 	}
 }
 
 func Test_Requests_LONG(t *testing.T) {
 	wg := &sync.WaitGroup{}
-	server := InitServer("127.0.0.1", 22239)
+	server := InitServer("127.0.0.1", 22239, "PRIVKEY.pem")
 	server.AddMiddlewareBeforeResp(TEST_REQUESTS_LONG)
 	request := InitRequest()
 	request.Headers["COMMAND"] = "not-needed-for-tests"
@@ -193,7 +195,7 @@ func Test_Requests_LONG(t *testing.T) {
 		}
 	}()
 
-	client := InitClient("127.0.0.1", 22239)
+	client := InitClient("127.0.0.1", 22239, "PUBKEY.pem")
 	if err := client.Connect(); err != nil {
 		err = errors.New("error connecting to server (LONG): " + err.Error())
 		t.Error(err)
@@ -201,6 +203,7 @@ func Test_Requests_LONG(t *testing.T) {
 	client.Cookies["TEST0"] = InitCookie("TEST0", "TEST0")
 	client.Cookies["TEST1"] = InitCookie("TEST1", "TEST1")
 	client.Cookies["TEST2"] = InitCookie("TEST2", "TEST2")
+	client.AddToVault("TEST_CLIENT_VAULT", "TEST_CLIENT_VAULT")
 	wg.Add(1)
 	go func(client *Client, wg *sync.WaitGroup) {
 		defer wg.Done()
@@ -341,6 +344,35 @@ func Test_Requests_LONG(t *testing.T) {
 		}
 	}(client, wg)
 	wg.Wait()
+
+	if CONF.Include_Sysinfo {
+		sysinfo := GetSysInfo()
+		ret_sysinfo_json := Request_Server_LONG.Headers["SYSINFO"]
+		var ret_info SysInfo
+		json.Unmarshal([]byte(ret_sysinfo_json), &ret_info)
+		if ret_info.Hostname != sysinfo.Hostname {
+			t.Error("Hostname mismatch: " + ret_info.Hostname + " != " + sysinfo.Hostname)
+		}
+		if ret_info.Platform != sysinfo.Platform {
+			t.Error("Platform mismatch: " + ret_info.Platform + " != " + sysinfo.Platform)
+		}
+		if ret_info.RAM != sysinfo.RAM {
+			t.Error("RAM mismatch: " + fmt.Sprintf("%v", ret_info.RAM) + " != " + fmt.Sprintf("%v", sysinfo.RAM))
+		}
+		if ret_info.CPU != sysinfo.CPU {
+			t.Error("CPU mismatch: " + ret_info.CPU + " != " + sysinfo.CPU)
+		}
+		if ret_info.Disk != sysinfo.Disk {
+			t.Error("Disk mismatch: " + fmt.Sprintf("%v", ret_info.Disk) + " != " + fmt.Sprintf("%v", sysinfo.Disk))
+		}
+		if ret_info.MacAddr != sysinfo.MacAddr {
+			t.Error("MacAddr mismatch: " + ret_info.MacAddr + " != " + sysinfo.MacAddr)
+		}
+	}
+
+	if Request_Server_LONG.Data["TEST_CLIENT_VAULT"] != "TEST_CLIENT_VAULT" {
+		t.Error("CLIENT vault mismatch (LONG): " + Request_Server_LONG.Data["TEST_CLIENT_VAULT"])
+	}
 
 	// CONF.LOGGER.Test("(LONG) Closing client connection")
 	if err := client.Close(); err != nil {

@@ -2,6 +2,7 @@ package tcpproto
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -167,7 +168,7 @@ func parseHeader(data []byte) (map[string]string, []byte, error) {
 			// Split the line into key value
 			line_data := bytes.SplitN(bytes.TrimSpace(line), []byte(":"), 2)
 			if len(line_data) != 2 {
-				err := errors.New("invalid key:value split")
+				err := errors.New("invalid key:value split: " + string(line))
 				CONF.LOGGER.Error(err.Error())
 				return nil, nil, err
 			}
@@ -184,7 +185,7 @@ func parseHeader(data []byte) (map[string]string, []byte, error) {
 	}
 }
 
-func ParseConnection(conn net.Conn) (*Request, *Response, error) {
+func (s *Server) ParseConnection(conn net.Conn) (*Request, *Response, error) {
 	// Read the header when one is sent.
 	data_part_one, err := getHeader(conn)
 	if err != nil {
@@ -229,6 +230,7 @@ func ParseConnection(conn net.Conn) (*Request, *Response, error) {
 
 	// Transfer the vault
 	TransferValues(rq, resp)
+	s.DecryptClientVault(rq)
 
 	// Parse the file if one exists:
 	err = rq.ParseFile()
@@ -279,7 +281,7 @@ func getContent(conn net.Conn, recv_data []byte, content_length int) ([]byte, er
 
 func TransferValues(rq *Request, resp *Response) {
 	for key, value := range rq.Headers {
-		if strings.Contains(key, "VAULT-") {
+		if strings.HasPrefix(key, "VAULT-") {
 			key, value, ok := CONF.GetVault(value)
 			if ok {
 				resp.Vault[key] = value
@@ -289,4 +291,19 @@ func TransferValues(rq *Request, resp *Response) {
 		}
 	}
 
+}
+
+func (s *Server) DecryptClientVault(rq *Request) {
+	for key, value := range rq.Headers {
+		if strings.HasPrefix(key, "CLIENT_VAULT-") {
+			value, err := base64.StdEncoding.DecodeString(value)
+			if err != nil {
+				CONF.LOGGER.Error(err.Error())
+			}
+			decrypted := DecryptWithPrivateKey(value, s.PRIVKEY)
+			delete(rq.Headers, key)
+			key = strings.Replace(key, "CLIENT_VAULT-", "", -1)
+			rq.Data[key] = string(decrypted)
+		}
+	}
 }

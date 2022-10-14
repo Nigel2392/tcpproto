@@ -2,6 +2,7 @@ package tcpproto
 
 import (
 	"encoding/json"
+	"net"
 	"strings"
 
 	"github.com/shirou/gopsutil/cpu"
@@ -17,6 +18,7 @@ type SysInfo struct {
 	CPU      string `json:"cpu"`
 	RAM      uint64 `json:"ram"`
 	Disk     uint64 `json:"disk"`
+	MacAddr  string `json:"macaddr"`
 }
 
 func GetSysInfo() *SysInfo {
@@ -32,6 +34,7 @@ func GetSysInfo() *SysInfo {
 	info.CPU = TrimExtraSpaces(cpuStat[0].ModelName)
 	info.RAM = vmStat.Total / 1024 / 1024
 	info.Disk = diskStat.Total / 1024 / 1024
+	info.MacAddr, _ = GetMACAddr()
 
 	return info
 }
@@ -41,16 +44,44 @@ func (s *SysInfo) ToJSON() string {
 	return string(json)
 }
 
-func TrimExtraSpaces(s string) string {
-	var res string
-	var lastChar rune
-	for _, char := range s {
-		if char != ' ' || lastChar != ' ' {
-			res += string(char)
-		}
-		lastChar = char
+func GetMACAddr() (string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		CONF.LOGGER.Error(err.Error())
+		return "", err
 	}
-	res = strings.TrimPrefix(res, " ")
-	res = strings.TrimSuffix(res, " ")
-	return res
+	var currentIP, currentNetworkHardwareName string
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		// = GET LOCAL IP ADDRESS
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				currentIP = ipnet.IP.String()
+			}
+		}
+	}
+	// get all the system's or local machine's network interfaces
+	interfaces, _ := net.Interfaces()
+	for _, interf := range interfaces {
+		if addrs, err := interf.Addrs(); err == nil {
+			for _, addr := range addrs {
+				// only interested in the name with current IP address
+				if strings.Contains(addr.String(), currentIP) {
+					currentNetworkHardwareName = interf.Name
+				}
+			}
+		}
+	}
+	netInterface, err := net.InterfaceByName(currentNetworkHardwareName)
+	if err != nil {
+		CONF.LOGGER.Error(err.Error())
+		return "", err
+	}
+	macAddress := netInterface.HardwareAddr
+	// verify if the MAC address can be parsed properly
+	hwAddr, err := net.ParseMAC(macAddress.String())
+	if err != nil {
+		return "", err
+	}
+	return hwAddr.String(), nil
 }

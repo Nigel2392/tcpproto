@@ -1,28 +1,41 @@
 package tcpproto
 
 import (
+	"crypto/rsa"
+	"encoding/base64"
 	"errors"
 	"net"
 	"strconv"
 )
 
 type Client struct {
-	IP      string
-	Port    int
-	Conn    net.Conn
-	Cookies map[string]*Cookie
+	IP          string
+	Port        int
+	Conn        net.Conn
+	Cookies     map[string]*Cookie
+	ClientVault map[string]string
+	PUBKEY      *rsa.PublicKey
 }
 
 func (c *Client) Addr() string {
 	return c.IP + ":" + strconv.Itoa(c.Port)
 }
 
-func InitClient(ip string, port int) *Client {
-	return &Client{
-		IP:      ip,
-		Port:    port,
-		Cookies: map[string]*Cookie{},
+func InitClient(ip string, port int, pubkey_file string) *Client {
+	client := &Client{
+		IP:          ip,
+		Port:        port,
+		Cookies:     map[string]*Cookie{},
+		ClientVault: map[string]string{},
 	}
+	// Load the public key
+	pubkey := ImportPublic_PEM_Key(pubkey_file)
+	client.PUBKEY = pubkey
+	return client
+}
+
+func (c *Client) AddToVault(key string, value string) {
+	c.ClientVault[key] = value
 }
 
 func (c *Client) Connect() error {
@@ -43,6 +56,12 @@ func (c *Client) Send(rq *Request) (*Response, error) {
 		rq.AddCookie(key, val.Value)
 	}
 
+	for key, val := range c.ClientVault {
+		val := EncryptWithPublicKey([]byte(val), c.PUBKEY)
+		strval := base64.StdEncoding.EncodeToString(val)
+		rq.AddHeader("CLIENT_VAULT-"+key, strval)
+	}
+
 	if CONF.Include_Sysinfo {
 		sysinfo := GetSysInfo()
 		rq.Headers["SYSINFO"] = sysinfo.ToJSON()
@@ -51,13 +70,6 @@ func (c *Client) Send(rq *Request) (*Response, error) {
 		//rq.AddCookie("SYSINFO_CPU", sysinfo.CPU)
 		//rq.AddCookie("SYSINFO_RAM", fmt.Sprintf("%d", sysinfo.RAM))
 		//rq.AddCookie("SYSINFO_DISK", fmt.Sprintf("%d", sysinfo.Disk))
-	}
-
-	if CONF.Include_MACaddr {
-		mac, err := GetMACAddr()
-		if err == nil {
-			rq.AddCookie("MACaddr", mac)
-		}
 	}
 
 	// Send the request
