@@ -185,7 +185,7 @@ func Test_Requests_LONG(t *testing.T) {
 		request.Headers["TEST"+strconv.Itoa(i)] = "TEST" + strconv.Itoa(i)
 	}
 
-	request.Content = []byte(strings.Repeat("TEST_CONTENT\n", 1000000000/8)) // 1000000000/16*13 = 0.8125GB
+	request.Content = []byte(strings.Repeat("TEST_CONTENT\n", 1000000000/16)) // 1000000000/16*13 = 0.8125GB
 
 	go func() {
 		err := server.Start()
