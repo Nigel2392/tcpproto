@@ -9,8 +9,10 @@ This package currently supports:
   * Max Memory
   * Max Disk
 * Encrypting certain headers client side, with an RSA public key
+  * Only works if public/private key is provided, and CONF.Use_Crypto=true
 * Cookies encrypted with the SECRET_KEY
-* File inside of requests
+* Non-encrypted cookies
+* File inside of requests (Single file only)
 * Max size of requests
 * Handling based upon `COMMAND:` header
 * Support for middleware before and after calling the main handler
@@ -28,7 +30,7 @@ type Config struct {
 	MAX_CONTENT_LENGTH int
 	MAX_HEADER_SIZE    int
 }
-
+// Predefined byte-sizes
 const (
 	DISABLED     = 0
 	KILOBYTE     = 1024
@@ -50,20 +52,18 @@ conf := tcpproto.SetConfig(
 Then we can get to start sending requests.
 A typical response/request looks like this:
 ```go
-CONTENT_LENGTH: CONTENT_LENGTH int
-COMMAND: COMMAND string
-CUSTOM_HEADER: CUSTOM_HEADER string
-CUSTOM_HEADER: CUSTOM_HEADER string
-CUSTOM_HEADER: CUSTOM_HEADER string
-CUSTOM_HEADER: CUSTOM_HEADER string
-HAS_FILE: HAS_FILE bool
-FILE_NAME: FILE_NAME string
-FILE_SIZE: FILE_SIZE int
-FILE_BOUNDARY: FILE_BOUNDARY string
+CONTENT_LENGTH: CONTENT_LENGTH
+COMMAND: COMMAND
+CUSTOM_HEADER: CUSTOM_HEADER
+CUSTOM_HEADER1: CUSTOM_HEADER1
+CUSTOM_HEADER2: CUSTOM_HEADER2
+CUSTOM_HEADER3: CUSTOM_HEADER3
+HAS_FILE: HAS_FILE 
+FILE_NAME: FILE_NAME 
+FILE_SIZE: FILE_SIZE 
+FILE_BOUNDARY: FILE_BOUNDARY 
 
 FILE_BOUNDARY
-FILE CONTENT
-FILE CONTENT
 FILE CONTENT
 FILE_BOUNDARY
 
