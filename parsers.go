@@ -156,7 +156,7 @@ func parseHeader(data []byte) (map[string]string, []byte, error) {
 	// The message is the rest of the data
 
 	// Split the data into header and message. Only split on the first double newline
-	content := bytes.SplitN(data, []byte("\n\n"), 2)
+	content := bytes.SplitN(data, []byte("\r\n\r\n"), 2)
 	if len(content) == 2 {
 		header_data := content[0]
 		message_data := content[1]
@@ -251,7 +251,7 @@ func getHeader(conn net.Conn) ([]byte, error) {
 		return nil, err
 	}
 
-	for !bytes.Contains(data_part_one, []byte("\n\n")) {
+	for !bytes.Contains(data_part_one, []byte("\r\n\r\n")) {
 		data_part_two := make([]byte, CONF.BUFF_SIZE)
 		_, err := conn.Read(data_part_two)
 		if err != nil {
