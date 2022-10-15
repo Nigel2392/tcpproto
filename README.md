@@ -103,10 +103,10 @@ response.Forget(key string)
 ```
 When the client has sent this data, you could look at it like so:
 ```go
-SetValues 	// Cookies
-Vault		// Vault
-Headers 	// Headers
-Data		// Client side vault
+response.SetValues 	// Cookies
+response.Vault		// Vault
+response.Headers 	// Headers
+response.Data		// Client side vault
 ```
 
 ### Client information
