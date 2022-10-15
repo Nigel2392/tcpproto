@@ -201,7 +201,7 @@ func (s *Server) ParseConnection(conn net.Conn) (*Request, *Response, error) {
 	// Get the content length
 	content_length, err := strconv.Atoi(header["CONTENT_LENGTH"])
 	if err != nil {
-		err = errors.New("invalid content length")
+		err = errors.New("invalid content length, not an integer")
 		CONF.LOGGER.Error(err.Error())
 		return nil, nil, err
 	}
