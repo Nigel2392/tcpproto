@@ -4,23 +4,36 @@ Simple http-like layer ontop of TCP.
 This layer is capable of transfering files, authentication, client-side storage and more!
 
 ## Usage:
-* First, inititalize the CONFIG like so:
+* The config struct is pretty basic, but you should not edit it manually. The config is predefined, and you can get it by calling `tcpproto.GetConfig()` or by using `SetConfig()`.
 ```go
-func InitConfig(secret_key string, loglevel string, buff_size int, use_crypto bool, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
-	return &Config{
-		SecretKey:       secret_key,
-		LOGGER:          NewLogger(loglevel),
-		BUFF_SIZE:       buff_size,
-		Include_Sysinfo: include_sysinfo,
-		Default_Auth:    authenticate,
-		Use_Crypto:      use_crypto,
-	}
+type Config struct {
+	SecretKey          string
+	LOGGER             *Logger
+	BUFF_SIZE          int
+	Default_Auth       func(rq *Request, resp *Response) error
+	Include_Sysinfo    bool
+	Use_Crypto         bool
+	MAX_CONTENT_LENGTH int
+	MAX_HEADER_SIZE    int
 }
 
-tcpproto.InitConfig("secret_key", "debug", 1024, true, true, func(rq *Request, resp *Response) error {
-	// Do authentication here
-	return nil
-})
+const (
+	DISABLED     = 0
+	KILOBYTE     = 1024
+	MEGABYTE     = 1024 * KILOBYTE
+	GIGABYTE     = 1024 * MEGABYTE
+	TEN_GIGABYTE = 10 * GIGABYTE
+)
+					       
+conf := tcpproto.SetConfig(
+	"SECRET_KEY", 		// Secret key for encryption
+	"DEBUG",    		// Logger level
+	2048,     			// Buffer size
+	tcpproto.DISABLED, 	// Max content length
+	true, 				// Include system info
+	true,  				// Use crypto
+	func(rq *Request, resp *Response) error {return nil} // Default authentication function.
+)
 ```
 Then we can get to start sending requests.
 A typical response/request looks like this:
