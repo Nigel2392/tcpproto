@@ -1,7 +1,19 @@
 # tcpproto
 Simple http-like layer ontop of TCP.
-
-This layer is capable of transfering files, authentication, client-side storage and more!
+This package currently supports:
+* Getting system information when used as a client, such as:
+  * Hostname
+  * CPU
+  * Platform (OS)
+  * Mac Address
+  * Max Memory
+  * Max Disk
+* Encrypting certain headers client side, with an RSA public key
+* Cookies encrypted with the SECRET_KEY
+* File inside of requests
+* Max size of requests
+* Handling based upon `COMMAND:` header
+* Support for middleware before and after calling the main handler
 
 ## Usage:
 * The config struct is pretty basic, but you should not edit it manually. The config is predefined, and you can get it by calling `tcpproto.GetConfig()` or by using `SetConfig()`.
