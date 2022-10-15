@@ -66,7 +66,6 @@ func main() {
 	s := tcpproto.InitServer(ipaddr, port, "PRIVATE_KEY.pem")
 	s.AddMiddlewareBeforeResp(AuthMiddleware) // Middleware to be called before the callback is called.
 	s.AddMiddlewareAfterResp(tcpproto.LogMiddleware) // Middleware to be called after the callback is called.
-	s.
 	s.AddCallback("SET", SET) // The callback to be called, derived from "COMMAND" header.
 	s.AddCallback("GET", GET)
 	if err := s.Start(); err != nil {
@@ -102,7 +101,21 @@ To remove a cookie from the client
 ```go
 response.Forget(key string)
 ```
-
+### Client information
+If you have enabled `Include_Sysinfo` in the CONFIG, you can access the following method in on the request:
+```go
+var system_information tcpproto.SysInfo
+system_information = request.SysInfo()
+```
+You then have access to the following information:
+```go
+system_information.Hostname 	// The hostname of the client
+system_information.Platform 	// The platform of the client
+system_information.CPU 			// The CPU of the client
+system_information.RAM 			// The RAM of the client
+system_information.Disk 		// The disk of the client
+system_information.MacAddr 		// The MAC address of the client
+```
 
 ## Client:
 A typical client looks like this:
@@ -113,12 +126,12 @@ request := InitRequest()
 // Set some headers
 // CONTENT_LENGTH is automatically added when generating the request.
 request.Headers["COMMAND"] = "SET"
-for i := 0; i < 10; i++ {
-	request.Headers["HEADER-TEST"+strconv.Itoa(i)] = "VALUE-TEST" + strconv.Itoa(i)
-}
+request.Headers["HEADER-TEST-1"] = "VALUE-TEST-1" 
+request.Headers["HEADER-TEST-2"] = "VALUE-TEST-2" 
+request.Headers["HEADER-TEST-3"] = "VALUE-TEST-3" 
 
 // Set request content
-request.Content = []byte(strings.Repeat("TEST_CONTENT\n", 200))
+request.Content = []byte("TEST_CONTENT\n")
 
 // Initialize client
 // If CONF.Use_Crypto is disabled, you do not have to provide the public RSA key,
@@ -158,16 +171,20 @@ type Response struct {
 	Headers   map[string]string
 	SetValues map[string]string
 	DelValues []string
+	Vault     map[string]string
 	Content   []byte
 	File      *FileData
+	Error     []error
 }
+
 // Request to send to the server
 type Request struct {
-	Headers map[string]string
-	Content []byte
-	File    *FileData
-	Data    map[string]string
-	User    *User
-	Conn    net.Conn
+	Headers            map[string]string
+	Vault              map[string]string
+	Content            []byte
+	File               *FileData
+	Data               map[string]string
+	User               *User
+	Conn               net.Conn
 }
 ```
