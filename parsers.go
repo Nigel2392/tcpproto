@@ -265,11 +265,10 @@ func getHeader(conn net.Conn) ([]byte, error) {
 			return nil, err
 		}
 		data_part_one = append(data_part_one, data_part_two...)
-		if len(data_part_one) > CONF.MAX_HEADER_SIZE {
-			err = errors.New("header too large")
+		if len(data_part_one) > CONF.MAX_HEADER_SIZE && CONF.MAX_HEADER_SIZE > 0 {
+			err = errors.New("header size exceeded")
 			return nil, err
 		}
-
 	}
 	return data_part_one, nil
 }
@@ -279,12 +278,11 @@ func getContent(conn net.Conn, recv_data []byte, content_length int) ([]byte, er
 		recv_data = recv_data[:content_length]
 	} else {
 		// Read the rest of the data
-		// To avoid denial of service attacks, we need to limit the amount of data that can be read
 		if content_length > CONF.MAX_CONTENT_LENGTH && CONF.MAX_CONTENT_LENGTH > 0 {
-			err := errors.New("content length too large")
+			err := errors.New("content size exceeded")
 			return nil, err
-			// }
-		} else {
+		}
+		for len(recv_data) < content_length {
 			data := make([]byte, content_length-len(recv_data))
 			_, err := conn.Read(data)
 			if err != nil {
@@ -292,6 +290,7 @@ func getContent(conn net.Conn, recv_data []byte, content_length int) ([]byte, er
 			}
 			recv_data = append(recv_data, data...)
 		}
+		recv_data = recv_data[:content_length]
 	}
 
 	return recv_data, nil

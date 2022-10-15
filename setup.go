@@ -1,9 +1,14 @@
 package tcpproto
 
 import (
+	"embed"
 	"encoding/base64"
 	"strings"
 )
+
+//go:embed PUBKEY.pem
+//go:embed PRIVKEY.pem
+var PEM embed.FS
 
 type Config struct {
 	SecretKey          string

@@ -166,14 +166,16 @@ func ExportPublic_PEM_Key(key *rsa.PublicKey, filename string) {
 }
 
 func ImportPublic_PEM_Key(filename string) *rsa.PublicKey {
-	keyfile, err := ioutil.ReadFile(filename)
+	keyfile, err := PEM.ReadFile(filename)
 	if err != nil {
 		CONF.LOGGER.Error("Error importing public key: " + err.Error())
+		return nil
 	}
 	block, _ := pem.Decode(keyfile)
 	key, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		CONF.LOGGER.Error("Error importing public key: " + err.Error())
+		return nil
 	}
 	return key.(*rsa.PublicKey)
 }
@@ -217,14 +219,16 @@ func PrivKeySTR_to_PrivKey(privkeystr string) *rsa.PrivateKey {
 }
 
 func ImportPrivate_PEM_Key(filename string) *rsa.PrivateKey {
-	keyfile, err := ioutil.ReadFile(filename)
+	keyfile, err := PEM.ReadFile(filename)
 	if err != nil {
 		CONF.LOGGER.Error("Error importing private key: " + err.Error())
+		return nil
 	}
 	block, _ := pem.Decode(keyfile)
 	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
 		CONF.LOGGER.Error("Error parsing private key: " + err.Error())
+		return nil
 	}
 	return key.(*rsa.PrivateKey)
 }
