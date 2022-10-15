@@ -236,6 +236,8 @@ func (s *Server) ParseConnection(conn net.Conn) (*Request, *Response, error) {
 
 	// Transfer the vault
 	TransferValues(rq, resp)
+	TransferCookies(rq, resp)
+
 	err = s.DecryptClientVault(rq)
 	if err != nil {
 		CONF.LOGGER.Error(err.Error())
@@ -309,7 +311,15 @@ func TransferValues(rq *Request, resp *Response) {
 			}
 		}
 	}
+}
 
+func TransferCookies(rq *Request, resp *Response) {
+	for key, value := range rq.Headers {
+		if strings.HasPrefix(key, "REMEMBER-") {
+			resp.SetValues[key[9:]] = value
+			delete(rq.Headers, key)
+		}
+	}
 }
 
 func (s *Server) DecryptClientVault(rq *Request) error {
