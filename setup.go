@@ -3,6 +3,7 @@ package tcpproto
 import (
 	"embed"
 	"encoding/base64"
+	"io/fs"
 	"strings"
 )
 
@@ -19,9 +20,10 @@ type Config struct {
 	Use_Crypto         bool
 	MAX_CONTENT_LENGTH int
 	MAX_HEADER_SIZE    int
+	FS                 fs.FS
 }
 
-func InitConfig(secret_key string, loglevel string, buff_size int, max_length int, use_crypto bool, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
+func InitConfig(secret_key string, loglevel string, buff_size int, max_length int, use_crypto bool, include_sysinfo bool, fs fs.FS, authenticate func(rq *Request, resp *Response) error) *Config {
 	return &Config{
 		SecretKey:          secret_key,
 		LOGGER:             NewLogger(loglevel),
@@ -31,6 +33,7 @@ func InitConfig(secret_key string, loglevel string, buff_size int, max_length in
 		Use_Crypto:         use_crypto,
 		MAX_CONTENT_LENGTH: max_length,
 		MAX_HEADER_SIZE:    max_length,
+		FS:                 fs,
 	}
 }
 
@@ -42,9 +45,9 @@ const (
 	TEN_GIGABYTE = 10 * GIGABYTE
 )
 
-var CONF = InitConfig("SECRET_KEY", "DEBUG", 2048, DISABLED, true, true, Authenticate)
+var CONF = InitConfig("SECRET_KEY", "DEBUG", 2048, DISABLED, true, true, PEM, Authenticate)
 
-func SetConfig(secret_key string, loglevel string, buff_size int, max_length int, use_crypto bool, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
+func SetConfig(secret_key string, loglevel string, buff_size int, max_length int, use_crypto bool, include_sysinfo bool, fs fs.FS, authenticate func(rq *Request, resp *Response) error) *Config {
 	CONF = InitConfig(secret_key, loglevel, buff_size, max_length, use_crypto, include_sysinfo, authenticate)
 	return CONF
 }
