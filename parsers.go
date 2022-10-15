@@ -299,9 +299,11 @@ func getContent(conn net.Conn, recv_data []byte, content_length int) ([]byte, er
 func TransferValues(rq *Request, resp *Response) {
 	for key, value := range rq.Headers {
 		if strings.HasPrefix(key, "VAULT-") {
-			key, value, ok := CONF.GetVault(value)
+			vkey, value, ok := CONF.GetVault(value)
 			if ok {
-				resp.Vault[key] = value
+				resp.Vault[vkey] = value
+				rq.Vault[vkey] = value
+				delete(rq.Headers, key)
 			} else {
 				CONF.LOGGER.Error(fmt.Sprintf("Vault key %s not found", value))
 			}
