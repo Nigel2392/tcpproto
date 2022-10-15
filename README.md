@@ -1,7 +1,7 @@
 # tcpproto
 Simple http-like layer ontop of TCP.
 This package currently supports:
-* Getting system information when used as a client, such as:
+* Getting system information from requests (`request.SysInfo()`):
   * Hostname
   * CPU
   * Platform (OS)
