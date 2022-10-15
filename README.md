@@ -22,7 +22,7 @@ tcpproto.InitConfig("secret_key", "debug", 1024, true, true, func(rq *Request, r
 	return nil
 })
 ```
-Then we can get to start sending requests, a typical request looks like this:
+Then we can get to start sending requests.
 A typical response/request looks like this:
 ```go
 CONTENT_LENGTH: CONTENT_LENGTH int
