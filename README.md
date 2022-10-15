@@ -3,8 +3,28 @@ Simple http-like layer ontop of TCP.
 
 This layer is capable of transfering files, authentication, client-side storage and more!
 
-A typical response/request looks like this:
+## Usage:
+* First, inititalize the CONFIG like so:
+```go
+func InitConfig(secret_key string, loglevel string, buff_size int, use_crypto bool, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
+	return &Config{
+		SecretKey:       secret_key,
+		LOGGER:          NewLogger(loglevel),
+		BUFF_SIZE:       buff_size,
+		Include_Sysinfo: include_sysinfo,
+		Default_Auth:    authenticate,
+		Use_Crypto:      use_crypto,
+	}
+}
+
+tcpproto.InitConfig("secret_key", "debug", 1024, true, true, func(rq *Request, resp *Response) error {
+	// Do authentication here
+	return nil
+})
 ```
+Then we can get to start sending requests, a typical request looks like this:
+A typical response/request looks like this:
+```go
 CONTENT_LENGTH: CONTENT_LENGTH int
 COMMAND: COMMAND string
 CUSTOM_HEADER: CUSTOM_HEADER string
@@ -28,7 +48,7 @@ CONTENT CONTENT CONTENT
 ```
 Where anything that has to do with files, can optionally be left out.  
 To add a file, you can use the following:
-```
+```go
 request.AddFile(filename string, content []byte, boundary string)
 ```
 The following is needed:  
@@ -37,13 +57,16 @@ Content length is used to make sure the whole request is parsed properly, and ch
 Command is used to add callbacks to the request/response cycle, where you can edit either one.  
 ## Server
 A typical server looks like this:  
-```
+```go
 func main() {
 	ipaddr := "127.0.0.1"
 	port := 22392
-	s := tcpproto.InitServer(ipaddr, port)
+	// If CONF.Use_Crypto is disabled, you do not have to provide the private RSA key,
+	// it can be left as an empty string.
+	s := tcpproto.InitServer(ipaddr, port, "PRIVATE_KEY.pem")
 	s.AddMiddlewareBeforeResp(AuthMiddleware) // Middleware to be called before the callback is called.
 	s.AddMiddlewareAfterResp(tcpproto.LogMiddleware) // Middleware to be called after the callback is called.
+	s.
 	s.AddCallback("SET", SET) // The callback to be called, derived from "COMMAND" header.
 	s.AddCallback("GET", GET)
 	if err := s.Start(); err != nil {
@@ -51,15 +74,39 @@ func main() {
 	}
 }
 ```
-
+### Middleware
 To add middleware, or callbacks, the function needs to take the following arguments:
+```go
+func MiddlewareOrCallback(rq *tcpproto.Request, resp *tcpproto.Response){
+	// Do stuff here
+}
 ```
-func MiddlewareOrCallback(rq *tcpproto.Request, resp *tcpproto.Response)
+
+In these middleware and callbacks you can ofcourse access all headers with request.Headers (Cookies are also stored here)
+Or optionally, you can encrypt data with the SECRET_KEY provided to the CONFIG.
+### Storing data client side
+This data is then sent, like HTTP cookies, on every request.
+To encrypt data, you can use the following:
+```go
+response.Lock(key string, data string)
 ```
+To set some cookies in the response, you can use the following:
+```go
+response.Remember(key string, data string)
+```
+To remove the encrypted data from the client
+```go
+response.ForgetVault(key string)
+```
+To remove a cookie from the client
+```go
+response.Forget(key string)
+```
+
 
 ## Client:
 A typical client looks like this:
-```
+```go
 // Initialise request
 request := InitRequest()
 
@@ -74,16 +121,23 @@ for i := 0; i < 10; i++ {
 request.Content = []byte(strings.Repeat("TEST_CONTENT\n", 200))
 
 // Initialize client
-client := InitClient("127.0.0.1", 12239)
+// If CONF.Use_Crypto is disabled, you do not have to provide the public RSA key,
+// it can be left as an empty string.
+client := InitClient("127.0.0.1", 12239, "PUBLIKKEY.pem")
+
 // Connect to server
 if err := client.Connect(); err != nil {
 	err = errors.New("error connecting to server: " + err.Error())
 	t.Error(err)
 }
+
 // Set some "cookies"
 client.Cookies["TEST0"] = InitCookie("TEST0", "TEST0")
-client.Cookies["TEST1"] = InitCookie("TEST1", "TEST1")
-client.Cookies["TEST2"] = InitCookie("TEST2", "TEST2")
+
+// Add something to the client side vault, this is encrypted with a public key, and decrypted by the server. 
+// This only works if CONF.Use_Crypto is enabled.
+client.Vault("Cookiename", "Cookievalue")
+
 // Get the response when sending the data to the server
 response, err = client.Send(request)
 if err != nil {
@@ -98,7 +152,7 @@ if err := client.Close(); err != nil {
 ```
 As you can see, the client receives the response back when sending data to a server. 
 This data fits into the following struct:
-```
+```go
 // Response the server sends back
 type Response struct {
 	Headers   map[string]string

@@ -55,7 +55,7 @@ func (resp *Response) Forget(key string) *Response {
 }
 
 func (resp *Response) ForgetVault(key string) {
-	resp.DelValues = append(resp.DelValues, key)
+	resp.DelValues = append(resp.DelValues, "VAULT-"+key)
 }
 
 func (resp *Response) AddFile(filename string, file []byte, boundary string) {
