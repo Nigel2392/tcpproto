@@ -2,7 +2,6 @@ package tcpproto
 
 import (
 	"bytes"
-	"encoding/base64"
 	"errors"
 	"strconv"
 	"strings"
@@ -72,18 +71,8 @@ func (resp *Response) DecodeHeaders(headers map[string]string) (map[string]strin
 	for k, v := range headers {
 		if strings.HasPrefix(k, "REMEMBER-") {
 			// Split the key and value
-			split := strings.SplitN(v, "%EQUALS%", 2)
-			b64val, err := base64.StdEncoding.DecodeString(split[1])
-			if err != nil {
-				err := errors.New("invalid base64 value")
-				return nil, nil, err
-			}
-			split[1] = string(b64val)
-			if len(split) != 2 {
-				return nil, nil, errors.New("length of split is not 2")
-			}
-			// Set the cookie
-			resp.SetValues[split[0]] = split[1]
+			key := strings.ReplaceAll(k, "REMEMBER-", "")
+			resp.SetValues[key] = v
 			delete(headers, k)
 		} else if strings.HasPrefix(k, "VAULT-") {
 			resp.SetValues[k] = v
@@ -130,8 +119,10 @@ func (resp *Response) Generate() []byte {
 
 	// Add content length
 	resp.Headers["CONTENT_LENGTH"] = strconv.Itoa(resp.ContentLength())
+
 	// Generate the header
 	header := resp.GenHeader()
+
 	// Add header to content
 	content = append([]byte(header), content...)
 	return content
@@ -146,7 +137,7 @@ func (resp *Response) GenHeader() string {
 	go func(headers map[string]string, hchan chan string) {
 		head := ""
 		for key, value := range headers {
-			head += key + ": " + value + "\r\n"
+			head += key + ":" + value + "\r\n"
 		}
 		headerchan <- head
 	}(resp.Headers, headerchan)
@@ -158,7 +149,7 @@ func (resp *Response) GenHeader() string {
 		for key, value := range headers {
 			index += 1
 			// value = base64.StdEncoding.EncodeToString([]byte(value))
-			head += "REMEMBER-" + strconv.Itoa(index) + ":" + key + "%EQUALS%" + value + "\r\n"
+			head += "REMEMBER-" + key + ":" + value + "\r\n"
 		}
 		headerchan <- head
 	}(resp.SetValues, headerchan)

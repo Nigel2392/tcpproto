@@ -56,9 +56,6 @@ func Test_Requests(t *testing.T) {
 		err = errors.New("error connecting to server: " + err.Error())
 		t.Error(err)
 	}
-	client.Cookies["TEST0"] = InitCookie("TEST0", "TEST0")
-	client.Cookies["TEST1"] = InitCookie("TEST1", "TEST1")
-	client.Cookies["TEST2"] = InitCookie("TEST2", "TEST2")
 	go func(client *Client) {
 		// var response *Response = InitResponse()
 		var err error = nil
@@ -202,10 +199,10 @@ func Test_Requests_LONG(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Set client cookies
-	client.Cookies["TEST0"] = InitCookie("TEST0", "TEST0")
-	client.Cookies["TEST1"] = InitCookie("TEST1", "TEST1")
-	client.Cookies["TEST2"] = InitCookie("TEST2", "TEST2")
+	//// Set client cookies
+	//client.Cookies["TEST0"] = InitCookie("TEST0", "TEST0")
+	//client.Cookies["TEST1"] = InitCookie("TEST1", "TEST1")
+	//client.Cookies["TEST2"] = InitCookie("TEST2", "TEST2")
 
 	// Add data to client-side vault
 	err := client.Vault("TEST_CLIENT_VAULT", "TEST_CLIENT_VAULT")
