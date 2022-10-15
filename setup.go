@@ -6,29 +6,41 @@ import (
 )
 
 type Config struct {
-	SecretKey       string
-	LOGGER          *Logger
-	BUFF_SIZE       int
-	Default_Auth    func(rq *Request, resp *Response) error
-	Include_Sysinfo bool
-	Use_Crypto      bool
+	SecretKey          string
+	LOGGER             *Logger
+	BUFF_SIZE          int
+	Default_Auth       func(rq *Request, resp *Response) error
+	Include_Sysinfo    bool
+	Use_Crypto         bool
+	MAX_CONTENT_LENGTH int
+	MAX_HEADER_SIZE    int
 }
 
-func InitConfig(secret_key string, loglevel string, buff_size int, use_crypto bool, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
+func InitConfig(secret_key string, loglevel string, buff_size int, max_length int, use_crypto bool, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
 	return &Config{
-		SecretKey:       secret_key,
-		LOGGER:          NewLogger(loglevel),
-		BUFF_SIZE:       buff_size,
-		Include_Sysinfo: include_sysinfo,
-		Default_Auth:    authenticate,
-		Use_Crypto:      use_crypto,
+		SecretKey:          secret_key,
+		LOGGER:             NewLogger(loglevel),
+		BUFF_SIZE:          buff_size,
+		Include_Sysinfo:    include_sysinfo,
+		Default_Auth:       authenticate,
+		Use_Crypto:         use_crypto,
+		MAX_CONTENT_LENGTH: max_length,
+		MAX_HEADER_SIZE:    max_length,
 	}
 }
 
-var CONF = InitConfig("SECRET_KEY", "DEBUG", 2048, true, true, Authenticate)
+const (
+	DISABLED     = 0
+	KILOBYTE     = 1024
+	MEGABYTE     = 1024 * KILOBYTE
+	GIGABYTE     = 1024 * MEGABYTE
+	TEN_GIGABYTE = 10 * GIGABYTE
+)
 
-func SetConfig(secret_key string, loglevel string, buff_size int, use_crypto bool, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
-	CONF = InitConfig(secret_key, loglevel, buff_size, use_crypto, include_sysinfo, authenticate)
+var CONF = InitConfig("SECRET_KEY", "DEBUG", 2048, DISABLED, true, true, Authenticate)
+
+func SetConfig(secret_key string, loglevel string, buff_size int, max_length int, use_crypto bool, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
+	CONF = InitConfig(secret_key, loglevel, buff_size, max_length, use_crypto, include_sysinfo, authenticate)
 	return CONF
 }
 
