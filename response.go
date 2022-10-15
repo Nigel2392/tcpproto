@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type Response struct {
@@ -178,10 +179,12 @@ func (resp *Response) GenHeader() string {
 		}
 		headerchan <- head
 	}(resp.DelValues, headerchan)
-
+	mu := sync.Mutex{}
 	// Wait for all the headers to be generated
 	for i := 0; i < 4; i++ {
+		mu.Lock()
 		header += <-headerchan
+		mu.Unlock()
 	}
 
 	// Close the channel

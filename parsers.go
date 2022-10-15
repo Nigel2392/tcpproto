@@ -274,15 +274,15 @@ func getContent(conn net.Conn, recv_data []byte, content_length int) ([]byte, er
 		recv_data = recv_data[:content_length]
 	} else {
 		// Read the rest of the data
-		for len(recv_data) < content_length {
-			data := make([]byte, CONF.BUFF_SIZE)
-			_, err := conn.Read(data)
-			if err != nil {
-				return nil, err
-			}
-			recv_data = append(recv_data, data...)
+		//for len(recv_data) < content_length {
+		data := make([]byte, content_length-len(recv_data))
+		_, err := conn.Read(data)
+		if err != nil {
+			return nil, err
 		}
-		recv_data = recv_data[:content_length]
+		recv_data = append(recv_data, data...)
+		//}
+		//recv_data = recv_data[:content_length]
 	}
 
 	return recv_data, nil

@@ -25,7 +25,7 @@ func InitConfig(secret_key string, loglevel string, buff_size int, use_crypto bo
 	}
 }
 
-var CONF = InitConfig("SECRET_KEY", "DEBUG", 2048, false, true, Authenticate)
+var CONF = InitConfig("SECRET_KEY", "DEBUG", 2048, true, true, Authenticate)
 
 func SetConfig(secret_key string, loglevel string, buff_size int, use_crypto bool, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
 	CONF = InitConfig(secret_key, loglevel, buff_size, use_crypto, include_sysinfo, authenticate)
