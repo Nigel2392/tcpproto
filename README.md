@@ -101,6 +101,14 @@ To remove a cookie from the client
 ```go
 response.Forget(key string)
 ```
+When the client has sent this data, you could look at it like so:
+```go
+SetValues 	// Cookies
+Vault		// Vault
+Headers 	// Headers
+Data		// Client side vault
+```
+
 ### Client information
 If you have enabled `Include_Sysinfo` in the CONFIG, you can access the following method in on the request:
 ```go

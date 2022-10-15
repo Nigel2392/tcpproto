@@ -78,11 +78,6 @@ func (c *Client) Send(rq *Request) (*Response, error) {
 	if CONF.Include_Sysinfo {
 		sysinfo := GetSysInfo()
 		rq.Headers["SYSINFO"] = sysinfo.ToJSON()
-		//rq.AddCookie("SYSINFO_HOSTNAME", sysinfo.Hostname)
-		//rq.AddCookie("SYSINFO_PLATFORM", sysinfo.Platform)
-		//rq.AddCookie("SYSINFO_CPU", sysinfo.CPU)
-		//rq.AddCookie("SYSINFO_RAM", fmt.Sprintf("%d", sysinfo.RAM))
-		//rq.AddCookie("SYSINFO_DISK", fmt.Sprintf("%d", sysinfo.Disk))
 	}
 
 	// Send the request
