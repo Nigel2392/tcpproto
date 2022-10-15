@@ -122,9 +122,9 @@ func (rq *Request) Generate() ([]byte, error) {
 	rq.Headers["CONTENT_LENGTH"] = strconv.Itoa(len(content))
 	// Generate headers
 	for key, value := range rq.Headers {
-		header += key + ":" + value + "\n"
+		header += key + ":" + value + "\r\n"
 	}
-	header += "\n"
+	header += "\r\n"
 	// Generate the final request
 	return append([]byte(header), content...), nil
 }

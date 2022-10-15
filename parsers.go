@@ -161,7 +161,7 @@ func parseHeader(data []byte) (map[string]string, []byte, error) {
 		header_data := content[0]
 		message_data := content[1]
 		// Split the header into key value pairs
-		header_lines := bytes.Split(header_data, []byte("\n"))
+		header_lines := bytes.Split(header_data, []byte("\r\n"))
 		for _, line := range header_lines {
 			// Remove spaces
 			// line = bytes.Replace(line, []byte(" "), []byte(""), -1)

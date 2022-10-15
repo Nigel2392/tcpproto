@@ -142,7 +142,7 @@ func (resp *Response) GenHeader() string {
 	// Generate the header
 	header := ""
 	for key, value := range resp.Headers {
-		header += key + ":" + value + "\n"
+		header += key + ":" + value + "\r\n"
 	}
 
 	// Write "cookie" values onto the header
@@ -150,7 +150,7 @@ func (resp *Response) GenHeader() string {
 	for key, value := range resp.SetValues {
 		index += 1
 		value = base64.StdEncoding.EncodeToString([]byte(value))
-		header += "REMEMBER-" + strconv.Itoa(index) + ":" + key + "%EQUALS%" + value + "\n"
+		header += "REMEMBER-" + strconv.Itoa(index) + ":" + key + "%EQUALS%" + value + "\r\n"
 	}
 
 	// Write to the vault
@@ -162,15 +162,15 @@ func (resp *Response) GenHeader() string {
 		if err != nil {
 			continue
 		}
-		header += "VAULT-" + key + ":" + val + "\n"
+		header += "VAULT-" + key + ":" + val + "\r\n"
 	}
 
 	// Write "forget" values onto the header
 	for i, value := range resp.DelValues {
-		header += "FORGET-" + strconv.Itoa(i) + ":" + value + "\n"
+		header += "FORGET-" + strconv.Itoa(i) + ":" + value + "\r\n"
 	}
 
-	header += "\n"
+	header += "\r\n"
 	return header
 }
 
