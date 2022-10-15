@@ -157,7 +157,7 @@ func (resp *Response) GenHeader() string {
 		index := 0
 		for key, value := range headers {
 			index += 1
-			value = base64.StdEncoding.EncodeToString([]byte(value))
+			// value = base64.StdEncoding.EncodeToString([]byte(value))
 			head += "REMEMBER-" + strconv.Itoa(index) + ":" + key + "%EQUALS%" + value + "\r\n"
 		}
 		headerchan <- head
@@ -192,6 +192,10 @@ func (resp *Response) GenHeader() string {
 	for i := 0; i < 4; i++ {
 		header += <-headerchan
 	}
+
+	// Close the channel
+	close(headerchan)
+
 	return header + "\r\n"
 }
 
