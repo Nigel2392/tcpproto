@@ -168,7 +168,7 @@ func parseHeader(data []byte) (map[string]string, []byte, error) {
 			// Split the line into key value
 			line_data := bytes.SplitN(bytes.TrimSpace(line), []byte(":"), 2)
 			if len(line_data) != 2 {
-				err := errors.New("invalid key:value split: " + string(line))
+				err := errors.New("invalid key:value split: " + fmt.Sprintf("%v", line_data))
 				CONF.LOGGER.Error(err.Error())
 				return nil, nil, err
 			}
@@ -230,7 +230,10 @@ func (s *Server) ParseConnection(conn net.Conn) (*Request, *Response, error) {
 
 	// Transfer the vault
 	TransferValues(rq, resp)
-	s.DecryptClientVault(rq)
+	err = s.DecryptClientVault(rq)
+	if err != nil {
+		CONF.LOGGER.Error(err.Error())
+	}
 
 	// Parse the file if one exists:
 	err = rq.ParseFile()
@@ -293,17 +296,25 @@ func TransferValues(rq *Request, resp *Response) {
 
 }
 
-func (s *Server) DecryptClientVault(rq *Request) {
-	for key, value := range rq.Headers {
-		if strings.HasPrefix(key, "CLIENT_VAULT-") {
-			value, err := base64.StdEncoding.DecodeString(value)
-			if err != nil {
-				CONF.LOGGER.Error(err.Error())
+func (s *Server) DecryptClientVault(rq *Request) error {
+	if CONF.Use_Crypto {
+		if s.PRIVKEY != nil {
+			for key, value := range rq.Headers {
+				if strings.HasPrefix(key, "CLIENT_VAULT-") {
+					value, err := base64.StdEncoding.DecodeString(value)
+					if err != nil {
+						err = errors.New("error decoding client vault")
+						return err
+					}
+					decrypted := DecryptWithPrivateKey(value, s.PRIVKEY)
+					delete(rq.Headers, key)
+					key = strings.Replace(key, "CLIENT_VAULT-", "", -1)
+					rq.Data[key] = string(decrypted)
+				}
 			}
-			decrypted := DecryptWithPrivateKey(value, s.PRIVKEY)
-			delete(rq.Headers, key)
-			key = strings.Replace(key, "CLIENT_VAULT-", "", -1)
-			rq.Data[key] = string(decrypted)
+			return nil
 		}
+		return errors.New("no private key")
 	}
+	return nil
 }

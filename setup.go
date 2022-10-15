@@ -11,22 +11,28 @@ type Config struct {
 	BUFF_SIZE       int
 	Default_Auth    func(rq *Request, resp *Response) error
 	Include_Sysinfo bool
+	Use_Crypto      bool
 }
 
-func InitConfig(secret_key string, loglevel string, buff_size int, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
+func InitConfig(secret_key string, loglevel string, buff_size int, use_crypto bool, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
 	return &Config{
 		SecretKey:       secret_key,
 		LOGGER:          NewLogger(loglevel),
 		BUFF_SIZE:       buff_size,
 		Include_Sysinfo: include_sysinfo,
 		Default_Auth:    authenticate,
+		Use_Crypto:      use_crypto,
 	}
 }
 
-var CONF = InitConfig("SECRET_KEY", "DEBUG", 2048, true, Authenticate)
+var CONF = InitConfig("SECRET_KEY", "DEBUG", 2048, false, true, Authenticate)
 
-func SetConfig(secret_key string, loglevel string, buff_size int, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
-	CONF = InitConfig(secret_key, loglevel, buff_size, include_sysinfo, authenticate)
+func SetConfig(secret_key string, loglevel string, buff_size int, use_crypto bool, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
+	CONF = InitConfig(secret_key, loglevel, buff_size, use_crypto, include_sysinfo, authenticate)
+	return CONF
+}
+
+func GetConfig() *Config {
 	return CONF
 }
 

@@ -28,14 +28,19 @@ func InitClient(ip string, port int, pubkey_file string) *Client {
 		Cookies:     map[string]*Cookie{},
 		ClientVault: map[string]string{},
 	}
-	// Load the public key
-	pubkey := ImportPublic_PEM_Key(pubkey_file)
-	client.PUBKEY = pubkey
+	if CONF.Use_Crypto {
+		// Load the public key
+		client.PUBKEY = ImportPublic_PEM_Key(pubkey_file)
+	}
 	return client
 }
 
-func (c *Client) AddToVault(key string, value string) {
-	c.ClientVault[key] = value
+func (c *Client) Vault(key string, value string) error {
+	if CONF.Use_Crypto {
+		c.ClientVault[key] = value
+		return nil
+	}
+	return errors.New("crypto is disabled")
 }
 
 func (c *Client) Connect() error {
@@ -56,10 +61,18 @@ func (c *Client) Send(rq *Request) (*Response, error) {
 		rq.AddCookie(key, val.Value)
 	}
 
-	for key, val := range c.ClientVault {
-		val := EncryptWithPublicKey([]byte(val), c.PUBKEY)
-		strval := base64.StdEncoding.EncodeToString(val)
-		rq.AddHeader("CLIENT_VAULT-"+key, strval)
+	if CONF.Use_Crypto {
+		if c.PUBKEY != nil {
+			for key, val := range c.ClientVault {
+				val := EncryptWithPublicKey([]byte(val), c.PUBKEY)
+				strval := base64.StdEncoding.EncodeToString(val)
+				rq.AddHeader("CLIENT_VAULT-"+key, strval)
+			}
+		} else {
+			err := errors.New("no public key provided")
+			CONF.LOGGER.Error(err.Error())
+			return nil, err
+		}
 	}
 
 	if CONF.Include_Sysinfo {

@@ -185,7 +185,7 @@ func Test_Requests_LONG(t *testing.T) {
 		request.Headers["TEST"+strconv.Itoa(i)] = "TEST" + strconv.Itoa(i)
 	}
 
-	request.Content = []byte(strings.Repeat("TEST_CONTENT\n", 1000000000/16)) // 1000000000/16*13 = 0.8125GB
+	request.Content = []byte(strings.Repeat("TEST_CONTENT\n", 1000000000/8)) // 1000000000/16*13 = 0.8125GB
 
 	go func() {
 		err := server.Start()
@@ -195,15 +195,33 @@ func Test_Requests_LONG(t *testing.T) {
 		}
 	}()
 
+	// Initialize client
 	client := InitClient("127.0.0.1", 22239, "PUBKEY.pem")
 	if err := client.Connect(); err != nil {
 		err = errors.New("error connecting to server (LONG): " + err.Error())
 		t.Error(err)
 	}
+
+	// Set client cookies
 	client.Cookies["TEST0"] = InitCookie("TEST0", "TEST0")
 	client.Cookies["TEST1"] = InitCookie("TEST1", "TEST1")
 	client.Cookies["TEST2"] = InitCookie("TEST2", "TEST2")
-	client.AddToVault("TEST_CLIENT_VAULT", "TEST_CLIENT_VAULT")
+
+	// Add data to client-side vault
+	err := client.Vault("TEST_CLIENT_VAULT", "TEST_CLIENT_VAULT")
+	if CONF.Use_Crypto {
+		if err != nil {
+			err = errors.New("error adding value to client vault (LONG): " + err.Error())
+			t.Error(err)
+		}
+	} else {
+		if err == nil {
+			err = errors.New("client vault returns no error (LONG): " + err.Error())
+			t.Error(err)
+		}
+	}
+
+	// Send request
 	wg.Add(1)
 	go func(client *Client, wg *sync.WaitGroup) {
 		defer wg.Done()
@@ -225,11 +243,15 @@ func Test_Requests_LONG(t *testing.T) {
 		}
 		CONF.LOGGER.Test("(LONG) Cookies: " + fmt.Sprintf("%v", client.Cookies))
 	}(client, wg)
+
 	// Wait for server to receive request
 	Request_Server_LONG = <-SERVER_REQUEST_LONG
+
 	// Set up contentlengths
 	rqtlen := request.ContentLength()
 	rqslen := Request_Server_LONG.ContentLength()
+
+	// Verify contentlengths
 	CONF.LOGGER.Test("(LONG) Testing contentlengths: " + strconv.Itoa(rqtlen) + " == " + strconv.Itoa(rqslen))
 	if rqtlen != rqslen {
 		t.Error("Content length mismatch: request.ContentLength()  !=  Request_Server_LONG.ContentLength()")
@@ -237,24 +259,32 @@ func Test_Requests_LONG(t *testing.T) {
 		t.Error("Request_Server_LONG.ContentLength(): ", rqslen)
 		t.Error("request.ContentLength() == Request_Server_LONG.ContentLength(): ", rqtlen == rqslen)
 	}
+
+	// Test content
 	CONF.LOGGER.Test("(LONG) Testing content")
 	if string(request.Content) != string(Request_Server_LONG.Content) {
 		t.Error("Content mismatch (LONG): string(request.Content) != string(Request_Server_LONG.Content)")
 		CONF.LOGGER.Error("Length content: " + strconv.Itoa(len(request.Content)))
 		CONF.LOGGER.Error("Server content length: " + strconv.Itoa(len(Request_Server_LONG.Content)))
 	}
+
+	// Generate request client-side
 	CONF.LOGGER.Test("(LONG) Generating request")
 	rqt, err := request.Generate()
 	if err != nil {
 		err = errors.New("error generating request from request test (LONG): " + err.Error())
 		t.Error(err)
 	}
+
+	// parse headers from client-side request
 	CONF.LOGGER.Test("(LONG) Parsing header")
 	headers_test, content_test, err := parseHeader(rqt)
 	if err != nil {
 		err = errors.New("error parsing header (LONG): " + err.Error())
 		t.Error(err)
 	}
+
+	// Validate client headers
 	CONF.LOGGER.Test("(LONG) Validating headers")
 	for key, value := range request.Headers {
 		val, ok := headers_test[key]
@@ -266,6 +296,7 @@ func Test_Requests_LONG(t *testing.T) {
 		}
 	}
 
+	// generate server-side request
 	CONF.LOGGER.Test("(LONG) Generating request")
 	rqs, err := Request_Server_LONG.Generate()
 	if err != nil {
@@ -273,6 +304,7 @@ func Test_Requests_LONG(t *testing.T) {
 		t.Error(err)
 	}
 
+	// parse headers from server-side request
 	CONF.LOGGER.Test("(LONG) Parsing header")
 	headers_server, content_server, err := parseHeader(rqs)
 	if err != nil {
@@ -280,6 +312,7 @@ func Test_Requests_LONG(t *testing.T) {
 		t.Error(err)
 	}
 
+	// Validate server headers
 	CONF.LOGGER.Test("(LONG) Validating headers")
 	for key, value := range Request_Server_LONG.Headers {
 		key, ok := headers_server[key]
@@ -292,6 +325,7 @@ func Test_Requests_LONG(t *testing.T) {
 		}
 	}
 
+	// Validate file content
 	if request.File.Present {
 		CONF.LOGGER.Test("(LONG) Validating file")
 		if string(content_test) != string(content_server) {
@@ -306,6 +340,7 @@ func Test_Requests_LONG(t *testing.T) {
 			CONF.LOGGER.Error("Server content length: " + strconv.Itoa(len(Request_Server_LONG.File.Content)))
 		}
 	}
+
 	// Create new request
 	request = InitRequest()
 	wg.Add(1)
@@ -345,6 +380,7 @@ func Test_Requests_LONG(t *testing.T) {
 	}(client, wg)
 	wg.Wait()
 
+	// Validate client-side system information
 	if CONF.Include_Sysinfo {
 		sysinfo := GetSysInfo()
 		ret_sysinfo_json := Request_Server_LONG.Headers["SYSINFO"]
@@ -370,8 +406,11 @@ func Test_Requests_LONG(t *testing.T) {
 		}
 	}
 
-	if Request_Server_LONG.Data["TEST_CLIENT_VAULT"] != "TEST_CLIENT_VAULT" {
-		t.Error("CLIENT vault mismatch (LONG): " + Request_Server_LONG.Data["TEST_CLIENT_VAULT"])
+	// Validate client-side vault
+	if CONF.Use_Crypto {
+		if Request_Server_LONG.Data["TEST_CLIENT_VAULT"] != "TEST_CLIENT_VAULT" {
+			t.Error("CLIENT vault mismatch (LONG): " + Request_Server_LONG.Data["TEST_CLIENT_VAULT"])
+		}
 	}
 
 	// CONF.LOGGER.Test("(LONG) Closing client connection")

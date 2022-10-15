@@ -31,7 +31,9 @@ func InitServer(ip string, port int, privkey_file string) *Server {
 		Callbacks:  make(map[string]func(rq *Request, resp *Response)),
 		Middleware: []*Middleware{},
 	}
-	srv.PRIVKEY = ImportPrivate_PEM_Key(privkey_file)
+	if CONF.Use_Crypto {
+		srv.PRIVKEY = ImportPrivate_PEM_Key(privkey_file)
+	}
 	return srv
 }
 
