@@ -172,6 +172,7 @@ func parseHeader(data []byte) (map[string]string, []byte, error) {
 				CONF.LOGGER.Error(err.Error())
 				return nil, nil, err
 			}
+			line_data[1] = bytes.TrimSpace(line_data[1])
 			line_data[0] = bytes.Replace(line_data[0], []byte(" "), []byte(""), -1)
 			header[string(line_data[0])] = string(line_data[1])
 		}
