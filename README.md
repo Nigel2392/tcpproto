@@ -1,44 +1,74 @@
 # tcpproto
 Simple http-like layer ontop of TCP.
+This package currently supports:
+* Getting system information from requests (`request.SysInfo()`):
+  * Hostname
+  * CPU
+  * Platform (OS)
+  * Mac Address
+  * Max Memory
+  * Max Disk
+* Encrypting certain headers client side, with an RSA public key
+  * Only works if public/private key is provided, and CONF.Use_Crypto=true
+* Cookies encrypted with the SECRET_KEY
+* Non-encrypted cookies
+* File inside of requests (Single file only)
+* Max size of requests
+* Handling based upon `COMMAND:` header
+* Support for middleware before and after calling the main handler
 
-This layer is capable of transfering files, authentication, client-side storage and more!
+## Installation:
+```
+go get github.com/Nigel2392/tcpproto
+```
 
 ## Usage:
-* First, inititalize the CONFIG like so:
+* The config struct is pretty basic, but you should not edit it manually. The config is predefined, and you can get it by calling `tcpproto.GetConfig()` or by using `SetConfig()`.
 ```go
-func InitConfig(secret_key string, loglevel string, buff_size int, use_crypto bool, include_sysinfo bool, authenticate func(rq *Request, resp *Response) error) *Config {
-	return &Config{
-		SecretKey:       secret_key,
-		LOGGER:          NewLogger(loglevel),
-		BUFF_SIZE:       buff_size,
-		Include_Sysinfo: include_sysinfo,
-		Default_Auth:    authenticate,
-		Use_Crypto:      use_crypto,
-	}
+type Config struct {
+	SecretKey          string
+	LOGGER             *Logger
+	BUFF_SIZE          int
+	Default_Auth       func(rq *Request, resp *Response) error
+	Include_Sysinfo    bool
+	Use_Crypto         bool
+	MAX_CONTENT_LENGTH int
+	MAX_HEADER_SIZE    int
 }
-
-tcpproto.InitConfig("secret_key", "debug", 1024, true, true, func(rq *Request, resp *Response) error {
-	// Do authentication here
-	return nil
-})
+// Predefined byte-sizes
+const (
+	DISABLED     = 0
+	KILOBYTE     = 1024
+	MEGABYTE     = 1024 * KILOBYTE
+	GIGABYTE     = 1024 * MEGABYTE
+	TEN_GIGABYTE = 10 * GIGABYTE
+)
+					       
+conf := tcpproto.SetConfig(
+	"SECRET_KEY", 		// Secret key for encryption
+	"DEBUG",    		// Logger level
+	2048,     			// Buffer size
+	tcpproto.DISABLED, 	// Max content length
+	true, 				// Include system info
+	true,  				// Use crypto
+	func(rq *Request, resp *Response) error {return nil} // Default authentication function.
+)
 ```
 Then we can get to start sending requests.
 A typical response/request looks like this:
 ```go
-CONTENT_LENGTH: CONTENT_LENGTH int
-COMMAND: COMMAND string
-CUSTOM_HEADER: CUSTOM_HEADER string
-CUSTOM_HEADER: CUSTOM_HEADER string
-CUSTOM_HEADER: CUSTOM_HEADER string
-CUSTOM_HEADER: CUSTOM_HEADER string
-HAS_FILE: HAS_FILE bool
-FILE_NAME: FILE_NAME string
-FILE_SIZE: FILE_SIZE int
-FILE_BOUNDARY: FILE_BOUNDARY string
+CONTENT_LENGTH: CONTENT_LENGTH
+COMMAND: COMMAND
+CUSTOM_HEADER: CUSTOM_HEADER
+CUSTOM_HEADER1: CUSTOM_HEADER1
+CUSTOM_HEADER2: CUSTOM_HEADER2
+CUSTOM_HEADER3: CUSTOM_HEADER3
+HAS_FILE: HAS_FILE 
+FILE_NAME: FILE_NAME 
+FILE_SIZE: FILE_SIZE 
+FILE_BOUNDARY: FILE_BOUNDARY 
 
 FILE_BOUNDARY
-FILE CONTENT
-FILE CONTENT
 FILE CONTENT
 FILE_BOUNDARY
 
