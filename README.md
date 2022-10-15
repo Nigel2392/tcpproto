@@ -17,6 +17,11 @@ This package currently supports:
 * Handling based upon `COMMAND:` header
 * Support for middleware before and after calling the main handler
 
+## Installation:
+```
+go get github.com/Nigel2392/tcpproto
+```
+
 ## Usage:
 * The config struct is pretty basic, but you should not edit it manually. The config is predefined, and you can get it by calling `tcpproto.GetConfig()` or by using `SetConfig()`.
 ```go
