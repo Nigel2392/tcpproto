@@ -72,7 +72,7 @@ func (resp *Response) DecodeHeaders(headers map[string]string) (map[string]strin
 	for k, v := range headers {
 		if strings.HasPrefix(k, "REMEMBER-") {
 			// Split the key and value
-			split := strings.Split(v, "%EQUALS%")
+			split := strings.SplitN(v, "%EQUALS%", 2)
 			b64val, err := base64.StdEncoding.DecodeString(split[1])
 			if err != nil {
 				err := errors.New("invalid base64 value")
