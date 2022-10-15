@@ -1,6 +1,7 @@
 package tcpproto
 
 import (
+	"bufio"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -166,12 +167,15 @@ func ExportPublic_PEM_Key(key *rsa.PublicKey, filename string) {
 }
 
 func ImportPublic_PEM_Key(filename string) *rsa.PublicKey {
-	keyfile, err := PEM.ReadFile(filename)
+	keyfile, err := CONF.FS.Open(filename)
+	keybuf := bufio.NewReader(keyfile)
+	keyf, err := ioutil.ReadAll(keybuf)
+
 	if err != nil {
 		CONF.LOGGER.Error("Error importing public key: " + err.Error())
 		return nil
 	}
-	block, _ := pem.Decode(keyfile)
+	block, _ := pem.Decode(keyf)
 	key, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		CONF.LOGGER.Error("Error importing public key: " + err.Error())
@@ -219,12 +223,15 @@ func PrivKeySTR_to_PrivKey(privkeystr string) *rsa.PrivateKey {
 }
 
 func ImportPrivate_PEM_Key(filename string) *rsa.PrivateKey {
-	keyfile, err := PEM.ReadFile(filename)
+	keyfile, err := CONF.FS.Open(filename)
+	keybuf := bufio.NewReader(keyfile)
+	keyf, err := ioutil.ReadAll(keybuf)
+
 	if err != nil {
 		CONF.LOGGER.Error("Error importing private key: " + err.Error())
 		return nil
 	}
-	block, _ := pem.Decode(keyfile)
+	block, _ := pem.Decode(keyf)
 	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
 		CONF.LOGGER.Error("Error parsing private key: " + err.Error())

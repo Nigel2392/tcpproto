@@ -48,7 +48,7 @@ const (
 var CONF = InitConfig("SECRET_KEY", "DEBUG", 2048, DISABLED, true, true, PEM, Authenticate)
 
 func SetConfig(secret_key string, loglevel string, buff_size int, max_length int, use_crypto bool, include_sysinfo bool, fs fs.FS, authenticate func(rq *Request, resp *Response) error) *Config {
-	CONF = InitConfig(secret_key, loglevel, buff_size, max_length, use_crypto, include_sysinfo, authenticate)
+	CONF = InitConfig(secret_key, loglevel, buff_size, max_length, use_crypto, include_sysinfo, fs, authenticate)
 	return CONF
 }
 
