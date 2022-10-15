@@ -140,38 +140,59 @@ func (resp *Response) Generate() []byte {
 func (resp *Response) GenHeader() string {
 	// Add headers
 	// Generate the header
+	headerchan := make(chan string)
 	header := ""
-	for key, value := range resp.Headers {
-		header += key + ":" + value + "\r\n"
-	}
 
-	// Write "cookie" values onto the header
-	index := 0
-	for key, value := range resp.SetValues {
-		index += 1
-		value = base64.StdEncoding.EncodeToString([]byte(value))
-		header += "REMEMBER-" + strconv.Itoa(index) + ":" + key + "%EQUALS%" + value + "\r\n"
-	}
-
-	// Write to the vault
-	index = 0
-	for key, value := range resp.Vault {
-		index += 1
-		// Encrypt the vault key and value
-		val, err := CONF.GenVault(key, value)
-		if err != nil {
-			continue
+	go func(headers map[string]string, hchan chan string) {
+		head := ""
+		for key, value := range headers {
+			head += key + ": " + value + "\r\n"
 		}
-		header += "VAULT-" + key + ":" + val + "\r\n"
-	}
+		headerchan <- head
+	}(resp.Headers, headerchan)
 
-	// Write "forget" values onto the header
-	for i, value := range resp.DelValues {
-		header += "FORGET-" + strconv.Itoa(i) + ":" + value + "\r\n"
-	}
+	go func(headers map[string]string, hchan chan string) {
+		// Write "cookie" values onto the header
+		head := ""
+		index := 0
+		for key, value := range headers {
+			index += 1
+			value = base64.StdEncoding.EncodeToString([]byte(value))
+			head += "REMEMBER-" + strconv.Itoa(index) + ":" + key + "%EQUALS%" + value + "\r\n"
+		}
+		headerchan <- head
+	}(resp.SetValues, headerchan)
 
-	header += "\r\n"
-	return header
+	go func(headers map[string]string, hchan chan string) {
+		// Write to the vault
+		head := ""
+		index := 0
+		for key, value := range headers {
+			index += 1
+			// Encrypt the vault key and value
+			val, err := CONF.GenVault(key, value)
+			if err != nil {
+				continue
+			}
+			head += "VAULT-" + key + ":" + val + "\r\n"
+		}
+		headerchan <- head
+	}(resp.Vault, headerchan)
+
+	go func(headers []string, hchan chan string) {
+		head := ""
+		// Write "forget" values onto the header
+		for i, value := range headers {
+			head += "FORGET-" + strconv.Itoa(i) + ":" + value + "\r\n"
+		}
+		headerchan <- head
+	}(resp.DelValues, headerchan)
+
+	// Wait for all the headers to be generated
+	for i := 0; i < 4; i++ {
+		header += <-headerchan
+	}
+	return header + "\r\n"
 }
 
 func (resp *Response) Bytes() []byte {
