@@ -112,6 +112,7 @@ func (resp *Response) Generate() []byte {
 		resp.Headers["FILE_NAME"] = resp.File.Name
 		resp.Headers["FILE_SIZE"] = strconv.Itoa(resp.File.Size)
 		resp.Headers["FILE_BOUNDARY"] = resp.File.Boundary
+		resp.Headers["HAS_FILE"] = "true"
 		content = append(resp.File.EndBoundary(), content...)
 		content = append(resp.File.Content, content...)
 		content = append(resp.File.StartBoundary(), content...)
