@@ -21,7 +21,14 @@ func (resp *Response) AddError(err string) {
 	resp.Error = append(resp.Error, errors.New(err))
 }
 
-func InitResponse() *Response {
+func InitResponse(args ...string) *Response {
+	if len(args) == 1 {
+		return initRespWithArgs(args[0])
+	}
+	return initRespPlain()
+}
+
+func initRespPlain() *Response {
 	return &Response{
 		Headers:   make(map[string]string),
 		SetValues: make(map[string]string),
@@ -31,6 +38,12 @@ func InitResponse() *Response {
 		File:      &FileData{},
 		Error:     make([]error, 0),
 	}
+}
+
+func initRespWithArgs(command string) *Response {
+	resp := initRespPlain()
+	resp.Headers["COMMAND"] = command
+	return resp
 }
 
 func (resp *Response) Lock(key string, value string) *Response {
