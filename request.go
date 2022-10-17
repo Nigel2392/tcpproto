@@ -27,8 +27,16 @@ type Request struct {
 	system_information *SysInfo
 }
 
-func InitRequest() *Request {
-	return &Request{
+func InitRequest(args ...string) *Request {
+	if len(args) == 0 {
+		return initReqPlain()
+	} else {
+		return initReqWithArgs(args[0])
+	}
+}
+
+func initReqPlain() *Request {
+	rq := &Request{
 		Headers: make(map[string]string),
 		Vault:   make(map[string]string),
 		Content: []byte{},
@@ -42,6 +50,12 @@ func InitRequest() *Request {
 		Data: make(map[string]string),
 		User: &User{},
 	}
+	return rq
+}
+func initReqWithArgs(command string) *Request {
+	rq := initReqPlain()
+	rq.Headers["COMMAND"] = command
+	return rq
 }
 
 func (rq *Request) AddCookie(key string, value string) {
