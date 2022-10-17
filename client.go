@@ -27,8 +27,9 @@ func InitClient(ip string, port int, pubkey_file string) *Client {
 		Port:        port,
 		Cookies:     map[string]*Cookie{},
 		ClientVault: map[string]string{},
+		PUBKEY:      nil,
 	}
-	if CONF.Use_Crypto {
+	if CONF.Use_Crypto && pubkey_file != "" {
 		// Load the public key
 		client.PUBKEY = ImportPublic_PEM_Key(pubkey_file)
 	}
@@ -36,7 +37,7 @@ func InitClient(ip string, port int, pubkey_file string) *Client {
 }
 
 func (c *Client) Vault(key string, value string) error {
-	if CONF.Use_Crypto {
+	if CONF.Use_Crypto && c.PUBKEY != nil {
 		c.ClientVault[key] = value
 		return nil
 	}
